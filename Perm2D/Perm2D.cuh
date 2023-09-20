@@ -29,8 +29,20 @@ typedef struct
 	float ConvergenceSolver;
 	long int MaxIterGlobal;
 	float ConvergenceRMS;
+	float DomainHeight;
+	float DomainWidth;
 }options;
 
+// Struct to hold constants, variables, and results intrinsic to the simulation
+typedef struct{
+	int Width;
+	int Height;
+	int nChannels;
+	float porosity;
+	float gpuTime;
+	float Perm;
+	float Convergence;
+}simulationInfo;
 
 int printOptions(options* opts){
 	/*
@@ -44,10 +56,12 @@ int printOptions(options* opts){
 	printf("--------------------------------------\n\n");
 	printf("User Selected Options:\n\n");
 	printf("--------------------------------------\n");
-	printf("Pressure Left = %.2f\n", opts->PL);
-	printf("Pressure Right = %.2f\n", opts->PR);
-	printf("Density = %.2f\n", opts->density);
-	printf("Viscosity = %.2f\n", opts->viscosity);
+	printf("Width = %.2f m\n", opts->DomainWidth);
+	printf("Height = %.2f m\n", opts->DomainHeight);
+	printf("Pressure Left = %.2f Pa\n", opts->PL);
+	printf("Pressure Right = %.2f Pa\n", opts->PR);
+	printf("Density = %.2f kg/m^3\n", opts->density);
+	printf("Kinematic Viscosity = %.2f m^2/s\n ", opts->viscosity);
 	printf("Mesh Refinement = %d\n", opts->MeshAmp);
 	printf("Maximum Iterations Solver = %ld\n", opts->MaxIterSolver);
 	printf("Solver Convergence = %.10f\n", opts->ConvergenceSolver);
@@ -125,6 +139,12 @@ int readInputFile(char* FileName, options* opts){
 
 	 	}else if(strcmp(tempC, "Verbose:") == 0){
 	 		opts->verbose = (bool)tempD;
+	 	}else if(strcmp(tempC, "DomainWidth:") == 0){
+	 		opts->DomainWidth = tempD;
+
+	 	}else if(strcmp(tempC, "DomainHeight:") == 0){
+	 		opts->DomainHeight = tempD;
+
 	 	}
 	}
 	
@@ -138,3 +158,50 @@ int readInputFile(char* FileName, options* opts){
 	return 0;
 }
 
+int readImage(unsigned char** imageAddress, int* Width, int* Height, int* NumOfChannels, char* ImageName){
+	/*
+		readImage Function:
+		Inputs:
+			- imageAddress: unsigned char reference to the pointer in which the image will be read to.
+			- Width: pointer to variable to store image width
+			- Height: pointer to variable to store image height
+			- NumofChannels: pointer to variable to store number of channels in the image.
+					-> NumofChannels has to be 1, otherwise code is terminated. Please enter grayscale
+						images with NumofChannels = 1.
+		Outputs: None
+
+		Function reads the image into the pointer to the array to store it.
+	*/
+
+	*imageAddress = stbi_load(ImageName, Width, Height, NumOfChannels, 1);
+
+	return 0;
+}
+
+
+float calcPorosity(unsigned char* imageAddress, int Width, int Height){
+	/*
+		calcPorosity
+		Inputs:
+			- imageAddress: pointer to the read image.
+			- Width: original width from std_image
+			- Height: original height from std_image
+
+		Output:
+			- porosity: float containing porosity.
+
+		Function calculates porosity by counting pixels.
+	*/
+
+	float totalCells = (float)Height*Width;
+	float porosity = 0;
+	for(int i = 0; i<Height; i++){
+		for(int j = 0; j<Width; j++){
+			if(imageAddress[i*Width + j] < 150){
+				porosity += 1.0/totalCells;
+			}
+		}
+	}
+
+	return porosity;
+}

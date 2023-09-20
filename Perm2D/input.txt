@@ -1,4 +1,6 @@
 Input File:
+DomainHeight: 0.1
+DomainWidth: 0.1
 Dens: 1000
 Visc: 1e-6
 MeshAmp: 1

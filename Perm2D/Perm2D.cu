@@ -8,6 +8,7 @@ int main(void){
 	// Parse user entered options
 
 	options opts;	// struct to hold options
+	simulationInfo simInfo;		// Struct to hold constants, variables, and results intrinsic to the simulation
 
 	char inputFilename[100];
 
@@ -15,6 +16,14 @@ int main(void){
 
 	readInputFile(inputFilename, &opts);
 
+	// Read 2D Input Image
+
+	int width, height, channel;
+	unsigned char* targetImage;
+
+	readImage(&targetImage, &width, &height, &channel, opts.inputFilename);
+
+	simInfo.porosity = calcPorosity(targetImage, width, height);
 
 
 	return 0;
