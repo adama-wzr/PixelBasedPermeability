@@ -35,9 +35,9 @@ typedef struct
 
 // Struct to hold constants, variables, and results intrinsic to the simulation
 typedef struct{
-	int Width;
-	int Height;
-	int nChannels;
+	int numCellsX;
+	int numCellsY;
+	int nElements;
 	float porosity;
 	float gpuTime;
 	float Perm;
@@ -61,7 +61,7 @@ int printOptions(options* opts){
 	printf("Pressure Left = %.2f Pa\n", opts->PL);
 	printf("Pressure Right = %.2f Pa\n", opts->PR);
 	printf("Density = %.2f kg/m^3\n", opts->density);
-	printf("Kinematic Viscosity = %.2f m^2/s\n ", opts->viscosity);
+	printf("Kinematic Viscosity = %.2f m^2/s\n", opts->viscosity);
 	printf("Mesh Refinement = %d\n", opts->MeshAmp);
 	printf("Maximum Iterations Solver = %ld\n", opts->MaxIterSolver);
 	printf("Solver Convergence = %.10f\n", opts->ConvergenceSolver);
