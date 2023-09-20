@@ -1,0 +1,13 @@
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <vector>
+#include <iostream>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#include <stdbool.h>
+#include <fstream>
+#include <cfloat>
+#include <set>
+#include <string>
