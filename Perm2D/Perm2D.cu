@@ -31,6 +31,8 @@ int main(void){
 	simInfo.porosity = calcPorosity(targetImage, width, height);
 
 	if(opts.verbose == 1){
+		std::cout << "Image Parameters:" << std::endl;
+		std::cout <<  "\n--------------------------------------" << std::endl;
 		std::cout << "Width (pixels) = " << width << " Height (pixels) = " << height << " Channel = " << channel << std::endl;
 		std::cout << "Porosity = " << simInfo.porosity << std::endl;
 	}
@@ -41,7 +43,7 @@ int main(void){
 	simInfo.numCellsY = height*opts.MeshAmp;		// Simulation Grid height in number of cells
 	simInfo.nElements = simInfo.numCellsY*simInfo.numCellsX;	// Number of elements (total)
 
-	int *Grid = (int *)malloc(sizeof(int)*simInfo.numCellsX*simInfo.numCellsY);		// Array that will hold binary domain (solid vs fluid)
+	unsigned int *Grid = (unsigned int*)malloc(sizeof(int)*simInfo.numCellsX*simInfo.numCellsY);		// Array that will hold binary domain (solid vs fluid)
 
 	// Mesh Amplify and decode image into binary matrix
 
@@ -56,6 +58,27 @@ int main(void){
 			}
 		}
 	}
+
+	// Next step is running the pathfinding algorithm
+	// If there is no path, don't simulate permeability
+
+	bool pathFlag = false;
+
+	domainInfo info;
+	info.xSize = simInfo.numCellsX;
+	info.ySize = simInfo.numCellsY;
+	info.verbose = 0;
+
+	pathFlag = aStarMain(Grid, info);
+
+	if(pathFlag == false){
+		std::cout << "No valid path found, exiting now." << std::endl;
+		return 1;
+	}else if(opts.verbose == 1){
+		std::cout << "Valid path found.\nProceeding to permeability CFD simulation." << std::endl;
+	}
+
+	
 
 	return 0;
 }
