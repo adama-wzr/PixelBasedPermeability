@@ -25,6 +25,7 @@ typedef struct
 	char* outputFilename;
 	bool printMaps;
 	bool verbose;
+	float alphaRelax;
 	long int MaxIterSolver;
 	float ConvergenceSolver;
 	long int MaxIterGlobal;
@@ -91,6 +92,7 @@ int printOptions(options* opts){
 	printf("Density = %.2f kg/m^3\n", opts->density);
 	printf("Kinematic Viscosity = %.2f m^2/s\n", opts->viscosity);
 	printf("Mesh Refinement = %d\n", opts->MeshAmp);
+	printf("Relaxation Factor = %f\n", opts->alphaRelax);
 	printf("Maximum Iterations Solver = %ld\n", opts->MaxIterSolver);
 	printf("Solver Convergence = %.10f\n", opts->ConvergenceSolver);
 	printf("Maximum Iterations Global = %ld\n", opts->MaxIterGlobal);
@@ -173,6 +175,9 @@ int readInputFile(char* FileName, options* opts){
 
 	 	}else if(strcmp(tempC, "DomainHeight:") == 0){
 	 		opts->DomainHeight = tempD;
+
+	 	}else if(strcmp(tempC, "RelaxFactor:") == 0){
+	 		opts->alphaRelax = tempD;
 
 	 	}
 	}
@@ -481,6 +486,27 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 	options* o, simulationInfo* info)
 {
 
+	/*
+		Explicit Momentum:
+
+		Inputs:
+			- unsigned int *Grid: pointer to array holding boundary information
+			- float *uExp: pointer to array to store the explicit component of u-velocity
+			- float *vExp: pointer to array to store the explicit component of v-velocity
+			- float *u: pointer to array storing u-velocity (from last iterative step)
+			- float *v: pointer to array storing v-velocity (from last iterative step)
+			- float *uCoeff: pointer to array to store the central coefficient of every u-velocity
+			- float *vCoeff: pointer to array to store the central coefficient of every v-velocity
+			- options* o: pointer to options data structure
+			- simulationInfo* info: pointer to simulationInfo data-structure
+		Outpus:
+			None.
+
+		Function will explicitly solve and modify the arrays uExp and vExp accordingly. Since this is
+		explicit, the discretization and solution are done in the same loop. 
+
+	*/
+
 	// Local variables for dx and dy and Area of each cell
 	float dx, dy;
 	dx = info->dx;
@@ -516,7 +542,7 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			// Explicit U coefficients
 
-			
+
 		}
 	}
 }

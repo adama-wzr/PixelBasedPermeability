@@ -92,9 +92,39 @@ int main(void){
 	float *uCoeff = (float *)malloc(sizeof(float)*(simInfo.numCellsX+1)*simInfo.numCellsY);	// store U velocity coefficients
 	float *vCoeff = (float *)malloc(sizeof(float)*(simInfo.numCellsY+1)*simInfo.numCellsX);	// store V velocity coefficients
 
+	// Initialize arrays
+
+	memset(Pressure, (opts.PL + opts.PR)/2, sizeof(Pressure));		// Initialized to avg. between PL and PR
+
+	memset(uExp, 0, sizeof(uExp));									// Initialized to 0 because we will solve for it first step
+	memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
+
+	memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
+	memset(vCoeff, 0, sizeof(vCoeff));								// Initialized to 0 because we solve for it first step
+
+	memset(V, 0, sizeof(V));										// Initialize to 0 because it is the dominant flow
+	memset(U, 0.001, sizeof(U));									// Initialized to 0.001 just to help convergence
+
 	// Now we use the SUV-CUT algorithm to solve velocity-pressure coupled
 
-	explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
+	float RMS = 1;
+	long int iter = 0;
+
+	while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS){
+
+		/*
+			SUV-CUT procedure:
+			- Solve for explicit component of u and v velocities
+			- Use explicit u and v to solve for pressure implicitly
+			- Use pressure solutions to correct u and v explicitly
+
+			Repeat until converged.
+
+		*/
+
+		explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
+
+	}
 
 	return 0;
 }
