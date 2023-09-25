@@ -80,9 +80,21 @@ int main(void){
 		std::cout << "Valid path found.\nProceeding to permeability CFD simulation." << std::endl;
 	}
 
+	// Define arrays essential for the solution
+
+	float *Pressure = (float *)malloc(sizeof(float)*simInfo.nElements);					// store pressure
+	float *U = (float *)malloc(sizeof(float)*(simInfo.numCellsX+1)*simInfo.numCellsY);	// store U velocity
+	float *V = (float *)malloc(sizeof(float)*(simInfo.numCellsY+1)*simInfo.numCellsX);	// store V velocity
+
+	float *uExp = (float *)malloc(sizeof(float)*(simInfo.numCellsX+1)*simInfo.numCellsY);	// store explicit U velocity
+	float *vExp = (float *)malloc(sizeof(float)*(simInfo.numCellsY+1)*simInfo.numCellsX);	// store explicit V velocity
+
+	float *uCoeff = (float *)malloc(sizeof(float)*(simInfo.numCellsX+1)*simInfo.numCellsY);	// store U velocity coefficients
+	float *vCoeff = (float *)malloc(sizeof(float)*(simInfo.numCellsY+1)*simInfo.numCellsX);	// store V velocity coefficients
+
 	// Now we use the SUV-CUT algorithm to solve velocity-pressure coupled
 
-	
+	explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
 
 	return 0;
 }

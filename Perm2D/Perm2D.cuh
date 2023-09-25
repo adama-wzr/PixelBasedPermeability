@@ -477,8 +477,46 @@ int aStarMain(unsigned int* GRID, domainInfo info){
 }
 
 
-int explicitMomentum(float *uExp, float *vExp, float *u, float *v, float *uCoeff, float *vCoeff,
+int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, float *v, float *uCoeff, float *vCoeff,
 	options* o, simulationInfo* info)
 {
 
+	// Local variables for dx and dy and Area of each cell
+	float dx, dy;
+	dx = info->dx;
+	dy = info->dy;
+	float A = dx*dy;
+	// Useful variables in the solution
+	float fwU, fwV, feU, feV, fnU, fnV, fsU, fsV;
+	float sourceLHS, sourceRHS;
+	float DeltaF;
+	float awU, awV, aeU, aeV, anU, anV, asU, asV;
+
+	float temp[3];
+
+	// Useful indexing variables
+
+	int nColsU = info->numCellsX + 1;
+	int nColsV = info->numCellsY;
+
+	int uRow, uCol, vRow, vCol;
+
+	// Define d: only possible because visc = constant and grid is uniform
+
+	float d = info->visc*A/dx;
+
+	// Write discretization
+	for(int i = 0; i<info->numCellsX+1; i++){
+		for(int j = 0; j<info->numCellsY; j++){
+			uRow = j;
+			uCol = i;
+
+			vRow = i;
+			vCol = j;
+
+			// Explicit U coefficients
+
+			
+		}
+	}
 }
