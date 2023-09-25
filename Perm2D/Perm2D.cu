@@ -42,6 +42,8 @@ int main(void){
 	simInfo.numCellsX = width*opts.MeshAmp;			// Simulation Grid width in number of cells
 	simInfo.numCellsY = height*opts.MeshAmp;		// Simulation Grid height in number of cells
 	simInfo.nElements = simInfo.numCellsY*simInfo.numCellsX;	// Number of elements (total)
+	simInfo.dx = simInfo.numCellsX/opts.DomainWidth;			// dx
+	simInfo.dy = simInfo.numCellsY/opts.DomainHeight;			// dy
 
 	unsigned int *Grid = (unsigned int*)malloc(sizeof(int)*simInfo.numCellsX*simInfo.numCellsY);		// Array that will hold binary domain (solid vs fluid)
 
@@ -77,6 +79,8 @@ int main(void){
 	}else if(opts.verbose == 1){
 		std::cout << "Valid path found.\nProceeding to permeability CFD simulation." << std::endl;
 	}
+
+	// Now we use the SUV-CUT algorithm to solve velocity-pressure coupled
 
 	
 

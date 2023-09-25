@@ -38,6 +38,8 @@ typedef struct{
 	int numCellsX;
 	int numCellsY;
 	int nElements;
+	float dx;
+	float dy;
 	float porosity;
 	float gpuTime;
 	float Perm;
@@ -471,6 +473,12 @@ int aStarMain(unsigned int* GRID, domainInfo info){
 	if(info.verbose == true){
 		printf("Failed to find a path.\n");
 	}
-	return foundDest;	
+	return foundDest;
+}
+
+
+int explicitMomentum(float *uExp, float *vExp, float *u, float *v, float *uCoeff, float *vCoeff,
+	options* o, simulationInfo* info)
+{
 
 }
