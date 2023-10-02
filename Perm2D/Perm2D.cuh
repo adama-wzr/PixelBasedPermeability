@@ -573,10 +573,43 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 				if(Grid[uRow*nColsV + uCol - 1] == 1){
 					uExp[uRow*nColsU + uCol] = 0;
 				}else{
-					
+					feU = 1/2*density*u[uRow*nColsU + uCol]*A;
+					feW = 1/2*density*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1])*A;
+					if(uRow == 0){
+						// North-East
+						fnU = 0;
+						fsU = 1/2*density*v[(uRow + 1)*nColsV + uCol - 1]*A;
+					} else if(uRow == nColsV - 1){
+						// South-East
+						fsU = 0;
+						fnU = 1/2*density*v[uRow*nColsV + uCol - 1]*A;
+					}else{
+						// East
+						fsU = 1/2*density*v[(uRow + 1)*nColsV + uCol - 1]*A;
+						fnU = 1/2*density*v[uRow*nColsV + uCol - 1]*A;
+					}
+				}
+			} else{
+				// not right or left
+				if(Grid[uRow*nColsV + uCol] == 1 || Grid[uRow*nColsV + uCol - 1] == 1){
+					uExp[uRow*nColsU + uCol] = 0;
+				} else{
+					feW = 1/2*density*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1])*A;
+					feU = 1/2*density*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1])*A;
+					if(uRow == 0){
+						fnU = 0;
+						fsU = 1/2*density*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1])*A;
+					}else if(uRow == nColsV - 1){
+						fsU = 0;
+						fnU = 1/2*density*(v[(uRow)*nColsV + uCol] + v[(uRow)*nColsV + uCol - 1])*A;
+					} else{
+						fsU = 1/2*density*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1])*A;
+						fnU = 1/2*density*(v[(uRow)*nColsV + uCol] + v[(uRow)*nColsV + uCol - 1])*A;
+					}
 				}
 			}
 
+			// Explicit V-coefficients
 
 
 
