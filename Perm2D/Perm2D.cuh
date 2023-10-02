@@ -511,12 +511,15 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 	float dx, dy;
 	dx = info->dx;
 	dy = info->dy;
+	float alpha = o->alphaRelax;
 	float A = dx*dy;
 	// Useful variables in the solution
 	float fwU, fwV, feU, feV, fnU, fnV, fsU, fsV;
 	float sourceLHS, sourceRHS;
 	float DeltaF;
 	float awU, awV, aeU, aeV, anU, anV, asU, asV;
+	float density = o->density;
+	float viscosity = o->viscosity;
 
 	float temp[3];
 
@@ -529,7 +532,7 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 	// Define d: only possible because visc = constant and grid is uniform
 
-	float d = info->visc*A/dx;
+	float d = viscosity*A/dx;
 
 	// Write discretization
 	for(int i = 0; i<info->numCellsX+1; i++){
@@ -541,6 +544,44 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 			vCol = j;
 
 			// Explicit U coefficients
+
+			// Step 1: check for solid boundaries (no-slip)
+
+			if(uCol == 0){
+				// Left boundary of the domain
+				if(Grid[uRow*nColsV + uCol] == 1){
+					uExp[uRow*nColsU + uCol] = 0;
+				}else{
+					fwU = 1/2*density*u[uRow*nColsU + uCol]*A;
+					feU = 1/2*density*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1])*A;
+					if(uRow == 0){
+						// North-West
+						fnU = 0;
+						fsU = 1/2*density*v[uRow*nColsV + uCol]*A;
+					}else if(uRow == nColsV - 1){
+						// South-West
+						fsU = 0;
+						fnU = 1/2*density*v[(uRow + 1)*nColsV + uCol]*A;
+					}else{
+						// West
+						fsU = 1/2*density*v[(uRow + 1)*nColsV + uCol]*A;
+						fnU = 1/2*density*v[(uRow)*nColsV + uCol]*A;
+					}
+				}
+			} else if(uCol == nColsU){
+				// Right Boundary
+				if(Grid[uRow*nColsV + uCol - 1] == 1){
+					uExp[uRow*nColsU + uCol] = 0;
+				}else{
+					
+				}
+			}
+
+
+
+
+
+
 
 
 		}
