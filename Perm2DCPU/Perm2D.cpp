@@ -118,6 +118,8 @@ int main(void){
 			- Use explicit u and v to solve for pressure implicitly
 			- Use pressure solutions to correct u and v explicitly
 
+			- (optional) solve equations of state to update physical properties
+
 			Repeat until converged.
 
 		*/

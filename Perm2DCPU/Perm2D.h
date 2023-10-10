@@ -213,6 +213,30 @@ int readImage(unsigned char** imageAddress, int* Width, int* Height, int* NumOfC
 }
 
 
+float findMax(float one, float two, float three){
+	/*
+		findMax Function
+
+		Inputs:
+			- three floats
+		Outputs:
+			- returns the maximum of the three floats.
+	*/
+
+	float max;
+	float target[3] = {one, two, three};
+	for(int i = 0; i<3; i++){
+		if(i == 0){
+			max = target[i];
+		} else if(target[i] > max){
+			max = target[i];
+		}
+	}
+
+	return max;
+}
+
+
 float calcPorosity(unsigned char* imageAddress, int Width, int Height){
 	/*
 		calcPorosity
@@ -528,6 +552,9 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 	int nColsU = info->numCellsX + 1;
 	int nColsV = info->numCellsY;
 
+	int nRowsV = info->numCellsY+1;
+	int nRowsU = info->numCellsY;
+
 	int uRow, uCol, vRow, vCol;
 
 	// Define d: only possible because visc = constant and grid is uniform
@@ -545,80 +572,183 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			// Explicit U coefficients
 
-			// Step 1: check for solid boundaries (no-slip)
-
-			if(uCol == 0){
-				// Left boundary of the domain
-				if(Grid[uRow*nColsV + uCol] == 1){
-					uExp[uRow*nColsU + uCol] = 0;
-				}else{
-					fwU = 1/2*density*u[uRow*nColsU + uCol]*A;
-					feU = 1/2*density*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1])*A;
-					if(uRow == 0){
-						// North-West
-						fnU = 0;
-						fsU = 1/2*density*v[uRow*nColsV + uCol]*A;
-					}else if(uRow == nColsV - 1){
-						// South-West
-						fsU = 0;
-						fnU = 1/2*density*v[(uRow + 1)*nColsV + uCol]*A;
-					}else{
-						// West
-						fsU = 1/2*density*v[(uRow + 1)*nColsV + uCol]*A;
-						fnU = 1/2*density*v[(uRow)*nColsV + uCol]*A;
-					}
-				}
-			} else if(uCol == nColsU){
-				// Right Boundary
-				if(Grid[uRow*nColsV + uCol - 1] == 1){
-					uExp[uRow*nColsU + uCol] = 0;
-				}else{
-					feU = 1/2*density*u[uRow*nColsU + uCol]*A;
-					fwU = 1/2*density*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1])*A;
-					if(uRow == 0){
-						// North-East
-						fnU = 0;
-						fsU = 1/2*density*v[(uRow + 1)*nColsV + uCol - 1]*A;
-					} else if(uRow == nColsV - 1){
-						// South-East
-						fsU = 0;
-						fnU = 1/2*density*v[uRow*nColsV + uCol - 1]*A;
-					}else{
-						// East
-						fsU = 1/2*density*v[(uRow + 1)*nColsV + uCol - 1]*A;
-						fnU = 1/2*density*v[uRow*nColsV + uCol - 1]*A;
-					}
-				}
+			// fw and fe don't depend on corners
+			if (uCol == 0){
+				fwU = 1/2*density*A*u[uRow*nColsU + uCol];
+				feU = 1/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
+			} else if(uCol == info->numCellsX){
+				fwU = 1/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
+				feU = 1/2*density*A*u[uRow*nColsU + uCol];
 			} else{
-				// not right or left
-				if(Grid[uRow*nColsV + uCol] == 1 || Grid[uRow*nColsV + uCol - 1] == 1){
-					uExp[uRow*nColsU + uCol] = 0;
-				} else{
-					fwU = 1/2*density*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1])*A;
-					feU = 1/2*density*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1])*A;
-					if(uRow == 0){
-						fnU = 0;
-						fsU = 1/2*density*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1])*A;
-					}else if(uRow == nColsV - 1){
-						fsU = 0;
-						fnU = 1/2*density*(v[(uRow)*nColsV + uCol] + v[(uRow)*nColsV + uCol - 1])*A;
-					} else{
-						fsU = 1/2*density*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1])*A;
-						fnU = 1/2*density*(v[(uRow)*nColsV + uCol] + v[(uRow)*nColsV + uCol - 1])*A;
-					}
-				}
+				fwU = 1/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
+				feU = 1/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
 			}
+
+			// fs and fn depend on boundaries a lot more
+			if(uCol == 0 && uRow == 0){
+				// top left corner
+				fnU = 1/2*density*A*v[(nRowsV - 1)*nColsV + uCol];
+				fsU = 1/2*density*A*v[(uRow + 1)*nColsV + uCol];
+			} else if(uCol == 0 && uRow == nRowsU - 1){
+				// bottom left
+				fsU = 1/2*density*A*v[0];
+				fnU = 1/2*density*A*v[(uRow+1)*nColsV + uCol];
+			} else if(uCol == 0){
+				// Anywhere in left boundary
+				fnU = 1/2*density*A*v[uRow*nColsV + uCol];
+				fsU = 1/2*density*A*v[(uRow + 1)*nColsV + uCol];
+			} else if(uCol == nColsU - 1 && uRow == 0){
+				// top right corner
+				fnU = 1/2*density*A*v[(nRowsV - 1)*nColsV + uCol - 1];
+				fsU = 1/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
+			}else if(uCol == nColsU - 1 && uRow == nRowsU - 1){
+				// bottom right corner
+				fnU = 1/2*density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = 1/2*density*A*v[(0)*nColsV + uCol - 1];
+			} else if(uCol == nColsU - 1){
+				// right boundary
+				fnU = 1/2*density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = 1/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
+			} else if(uRow == 0){
+				// top boundary
+				fnU = 1/2*density*A*(v[(nRowsV - 1)*nColsV + uCol] + v[(nRowsV - 1)*nColsV + uCol - 1]);
+				fsU = 1/2*density*A*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1]);
+			} else if(uRow == nRowsU - 1){
+				// bottom boundary
+				fnU = 1/2*density*A*(v[uRow*nColsV + uCol] + v[uRow*nColsV + uCol - 1]);
+				fsU = 1/2*density*A*(v[uCol] + v[uCol - 1]);
+			} else{
+				// not a boundary
+				fsU = 1/2*density*A*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1]);
+				fnU = 1/2*density*A*(v[uRow*nColsV + uCol] + v[uRow*nColsV + uCol - 1]);
+			}
+			
 
 			// Explicit V-coefficients
 
+			if (vRow == 0){
+				// top
+				fwV = 1/2*density*A*(u[vRow*nColsU + vCol] + u[(nRowsU - 1)*nColsU + vCol]);
+				feV = 1/2*density*A*(u[vRow*nColsU + vCol + 1] + u[(nRowsU - 1)*nColsU + vCol + 1]);
 
+				fsV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow + 1)*nColsV + vCol]);
+				fnV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(nRowsV - 1)*nColsV + vCol]);
+			} else if(vRow == nRowsV - 1){
+				// bottom
+				fwV = 1/2*density*A*(u[(vRow - 1)*nColsU + vCol] + u[(0)*nColsU + vCol]);
+				feV = 1/2*density*A*(u[(vRow - 1)*nColsU + vCol + 1] + u[(0)*nColsU + vCol + 1]);
 
+				fsV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[vCol]);
+				fnV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow - 1)*nColsV + vCol]);
+			} else{
+				// not a boundary
+				fwV = 1/2*density*A*(u[vRow*nColsU + vCol] + u[(vRow - 1)*nColsU + vCol]);
+				feV = 1/2*density*A*(u[vRow*nColsU + vCol + 1] + u[(vRow - 1)*nColsU + vCol + 1]);
 
+				fsV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow + 1)*nColsV + vCol]);
+				fnV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow - 1)*nColsV + vCol]);
+			}
 
+			// Check if U is in a solid interface. If not gather coefficients and calculate explicit component
 
+			if(uCol == 0 && Grid[uRow*nColsV + uCol] == 1){
+				uExp[uRow*nColsU + uCol] = 0;
+				uCoeff[uRow*nColsU + uCol] = 1;
+			} else if(uCol == nColsU - 1 && Grid[uRow*nColsV + uCol - 1] == 1){
+				uExp[uRow*nColsU + uCol] = 0;
+				uCoeff[uRow*nColsU + uCol] = 1;
+			} else if(Grid[uRow*nColsV + uCol] == 1 || Grid[uRow*nColsV + uCol - 1] == 1){
+				uExp[uRow*nColsU + uCol] = 0;
+				uCoeff[uRow*nColsU + uCol] = 1;
+			} else{
+				// Hybrid Discretization
+				awU = findMax(fwU, d + fwU/2, 0.0f);
+				aeU = findMax(-feU, d - feU/2, 0.0f);
+				asU = findMax(fsU, d + fsU/2, 0.0f);
+				anU = findMax(-fnU, d - fnU/2, 0.0f);
+
+				DeltaF = feU - fwU + fnU - fsU;
+
+				// Store central coefficient
+
+				// Should we select these coefficient better according to boundaries?
+
+				uCoeff[uRow*nColsU + uCol] = awU + aeU + asU + anU + DeltaF;
+
+				// Initalize uExplicit as a component of the previous iterative step
+
+				uExp[uRow*nColsU + uCol] = (1 - o->alphaRelax)*u[uRow*nColsU + uCol];
+
+				// Increment uExp based on neighborhood
+
+				if(uCol != 0){
+					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(awU*u[uRow*nColsU + uCol - 1]);
+				}
+
+				if(uCol != nColsU - 1){
+					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(aeU*u[uRow*nColsU + uCol + 1]);
+				}
+
+				if(uRow != 0){
+					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(anU*u[(uRow - 1)*nColsU + uCol]);
+				}
+
+				if(uRow != nRowsU - 1){
+					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(awU*u[(uRow + 1)*nColsU + uCol]);
+				}
+			}
+
+			// Check if V is in a solid interface. If not gather coefficients and calculate explicit component
+
+			if(vRow == 0 && Grid[vRow*nColsV + vCol] == 1){
+				vExp[vRow*nColsV + vCol] = 0;
+				vCoeff[vRow*nColsV + vCol] = 1;
+			} else if(vRow == nRowsV - 1 && Grid[(vRow - 1)*nColsV + vCol] == 1){
+				vExp[vRow*nColsV + vCol] = 0;
+				vCoeff[vRow*nColsV + vCol] = 1;
+			} else if(Grid[vRow*nColsV + vCol] == 1 || Grid[(vRow - 1)*nColsV + vCol] == 1){
+				vExp[vRow*nColsV + vCol] = 0;
+				vCoeff[vRow*nColsV + vCol] = 1;
+			} else{
+				// Hybrid Discretization
+				awV = findMax(fwV, d + fwV/2, 0.0f);
+				aeV = findMax(-feV, d - feV/2, 0.0f);
+				asV = findMax(fsV, d + fsV/2, 0.0f);
+				anV = findMax(-fnV, d - fnV/2, 0.0f);
+
+				DeltaF = feV - fwV + fnV - fsV;
+
+				// Store central coefficient
+
+				// Should we select these coefficient better according to boundaries?
+
+				vCoeff[vRow*nColsV + vCol] = awV + aeV + asV + anV + DeltaF;
+
+				// Initalize vExplicit as a component of the previous iterative step
+
+				vExp[vRow*nColsV + vCol] = (1 - o->alphaRelax)*v[vRow*nColsV + vCol];
+
+				// Increment vExp based on neighborhood
+
+				if(vCol != 0){
+					vExp[vRow*nColsV + vCol] = o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(awV*v[vRow*nColsV + vCol - 1]);
+				}
+
+				if(vCol != nColsV-1){
+					vExp[vRow*nColsV + vCol] = o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(aeV*v[vRow*nColsV + vCol + 1]);
+				}
+
+				if(vRow != 0){
+					vExp[vRow*nColsV + vCol] = o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(anV*v[(vRow - 1)*nColsV + vCol]);
+				}
+
+				if(vRow != nRowsV - 1){
+					vExp[vRow*nColsV + vCol] = o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(asV*v[(vRow + 1)*nColsV + vCol]);
+				}
+			} // end of if statement
 
 		}
-	}
+	} // end of for loops
 
 	return 0;
 }
