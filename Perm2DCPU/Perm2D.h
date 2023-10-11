@@ -11,6 +11,7 @@
 #include <cfloat>
 #include <set>
 #include <string>
+#include <omp.h>
 
 
 // Structure for saving user entered options
@@ -262,6 +263,89 @@ float calcPorosity(unsigned char* imageAddress, int Width, int Height){
 	}
 
 	return porosity;
+}
+
+int pJacobiCPU2D(double *arr, double *sol, double *x_vec, int iter_limit, double tolerance, int size){
+	int iteration_count = 0;
+	double *temp_x_vec = (double *)malloc(sizeof(double)*size*size);
+	double conv_stat = 1;
+	double sigma = 0;
+	double norm_diff;
+	double convergence_criteria = 1;
+	int i;
+	double Ax;
+
+	#pragma omp parallel private(i, sigma)
+
+	#pragma omp for
+	for (i = 0; i<size*size; i++){
+		temp_x_vec[i] = x_vec[i];
+		// temp_x_vec[i] = 0;
+	}
+
+	while(convergence_criteria > tolerance && iteration_count < iter_limit){
+		#pragma omp parallel private(i, sigma)
+		#pragma omp for
+		for(i = 0; i<size*size; i++){
+			sigma = 0;
+			for(int j = 1; j<5; j++){
+				if(arr[i*5 + j] != 0){
+					if(j == 1){
+						sigma += arr[i*5 + j]*temp_x_vec[i - 1];
+					} else if(j == 2){
+						sigma += arr[i*5 + j]*temp_x_vec[i + 1];
+					} else if(j == 3){
+						sigma += arr[i*5 + j]*temp_x_vec[i + size];
+					} else if(j == 4){
+						sigma += arr[i*5 + j]*temp_x_vec[i - size];
+					}
+				}
+			}
+			x_vec[i] = 1/arr[i*5 + 0]*(sol[i] - sigma);
+		}
+
+		// convergence
+
+		norm_diff = 0;
+
+		for(i = 0; i<size*size; i++){
+			norm_diff += fabs((x_vec[i] - temp_x_vec[i])/temp_x_vec[i])/(size*size);
+			temp_x_vec[i] = x_vec[i];
+		}
+
+		// norm_diff = 0;
+		// for ( i = 0; i < size*size; i++){
+		// 	// printf("x_vec[%d] = %1.2f\n", i, x_vec[i]);
+		// 	Ax = 0;
+		// 	for(int j = 0; j<5; j++){
+		// 		if(arr[i*5 + j] != 0){
+		// 			if(j == 0){
+		// 				Ax += arr[i*5 + j]*x_vec[i];
+		// 			} else if(j == 1){
+		// 				Ax += arr[i*5 + j]*x_vec[i - 1];
+		// 			} else if(j == 2){
+		// 				Ax += arr[i*5 + j]*x_vec[i + 1];
+		// 			} else if(j == 3){
+		// 				Ax += arr[i*5 + j]*x_vec[i + size];
+		// 			} else if(j == 4){
+		// 				Ax += arr[i*5 + j]*x_vec[i - size];
+		// 			}
+		// 		}
+		// 	}
+		// 	norm_diff += ((Ax-sol[i])*(Ax-sol[i]));
+		// 	temp_x_vec[i] = x_vec[i];
+		// }
+		// norm_diff = sqrt(norm_diff);
+		convergence_criteria = norm_diff;
+		if (iteration_count % 1000 == 0){
+			// printf("RMS = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
+		}
+		iteration_count++;
+	}
+
+	free(temp_x_vec);
+	// printf("Total iterations = %d, norm diff = %.12f\n", iteration_count, norm_diff);
+	return 0;
 }
 
 
