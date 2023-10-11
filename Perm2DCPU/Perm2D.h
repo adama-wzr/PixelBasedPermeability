@@ -752,3 +752,223 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 	return 0;
 }
+
+int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff, float *vCoeff, float *Pressure,
+	options* o, simulationInfo* info)
+{
+	/*
+	Implicit Pressure:
+
+	Inputs:
+		- unsigned int *Grid: pointer to array holding boundary information
+		- float *uExp: pointer to array to store the explicit component of u-velocity
+		- float *vExp: pointer to array to store the explicit component of v-velocity
+		- float *uCoeff: pointer to array to store the central coefficient of every u-velocity
+		- float *vCoeff: pointer to array to store the central coefficient of every v-velocity
+		- float *Pressure: array containing the pressure at each step
+		- options* o: pointer to options data structure
+		- simulationInfo* info: pointer to simulationInfo data-structure
+	Outpus:
+		None.
+
+	Function will assemble a coefficient matrix and a RHS to implicitly solve for Pressure. The Pressure array is
+	modified with the final answer at this iterative step. 
+
+	*/
+
+	float dx, dy;
+	dx = info->dx;
+	dy = info->dy;
+	float alpha = o->alphaRelax;
+	float Area = dx*dy;
+	float density = o->density;
+	float viscosity = o->viscosity;
+
+	/* Create the "A" matrix in Ax = b system
+	
+	Indexing is as follows:
+	
+	P = 0
+	W = 1
+	E = 2
+	S = 3
+	N = 4
+	*/
+
+	float *A = (float *)malloc(sizeof(float)*info->numCellsX*info->numCellsY*5);
+	float *RHS = (float *)malloc(sizeof(float)*info->numCellsX*info->numCellsY);
+
+	// Initialize A to all zero's to avoid NaN's
+	memset(A, 0, sizeof(A));
+
+	// Indexing variables
+
+	int nColsU = info->numCellsX + 1;
+	int nColsV = info->numCellsX;
+	int nColsP = info->numCellsX;
+	int index = 0;
+
+	// Neighborhood parameters
+
+	float ae, aw, as, an;
+	float aE, aW, aS, aN, aP;
+	float bp;
+
+	for(int row = 0; row<info->numCellsY; row++){
+		for(int col = 0; col<info->numCellsX; col++){
+			index = row*nColsP + col;
+
+			// Initialize to 0's to avoid NaN's
+			aP = 0;
+			aN = 0;
+			aS = 0;
+			aW = 0;
+			aE = 0;
+			bp = 0;
+			RHS[index] = 0;
+
+			// Check if P[index] is solid. If so, equation is P = 0 (central coeff = 1, RHS = 0)
+			if(Grid[index] == 1){
+				A[index*5 + 0] = 1;
+			}else
+			{ 
+				// If central point is not solid, then we proceed normally
+				if (row!=0)
+				{
+					// This means a North exists
+					if(Grid[index - nColsP] == 1)
+					{
+						// North is a solid
+						aN = 0;
+					} else
+					{
+						// North is not a solid
+						aN = alpha*density*Area*Area/vCoeff[row*nColsV + col];
+						aP += aN;
+						bp += density*vExp[row*nColsV + col]*Area;
+					}
+				} else
+				{
+					// row == 0, apply periodic BC
+					if(Grid[(info->numCellsY - 1)*nColsP + col] == 1)
+					{
+						// Periodic North is solid
+						aN = 0;
+					} else
+					{
+						// Periodic North is not a solid, proceed normally
+						aN = alpha*density*Area*Area/vCoeff[(info->numCellsY)*nColsV + col];
+						aP += aN;
+						bp += density*vExp[(info->numCellsY)*nColsV + col]*Area;
+					}
+				}
+
+				// Check South
+				if(row != info->numCellsY - 1)
+				{
+					// this means south exists
+					if (Grid[index + nColsP] == 1)
+					{
+						// South is a solid
+						aS = 0;
+					}else
+					{
+						// South exists and is not a solid
+						aS = alpha*density*Area*Area/vCoeff[(row + 1)*nColsV + col];
+						aP += aS;
+						bp += -density*vExp[(row + 1)*nColsV + col]*Area;
+					}
+				} else
+				{
+					// Apply periodic BC
+					if(Grid[col] == 1)
+					{
+						// This means it is solid
+						aS = 0;
+					}else
+					{
+						// Not solid
+						aS = alpha*density*Area*Area/vCoeff[col];
+						aP += aS;
+						bp += -density*vExp[col]*Area;
+					}
+				}
+
+				// aE and aW always exist, as long as they are not solid
+				if(col == 0)
+				{
+					// We are at the LHS boundary and we know our grid is not solid
+					aW = alpha*density*Area*Area/uCoeff[row*nColsU + col];
+					bp += -density*uExp[row*nColsU + col]*Area;
+					RHS[index] += -aW*o->PL;
+					aP += aW;
+					// Check that east grid is not solid. If it is set coeff to zero
+					if(Grid[index + 1] == 1)
+					{
+						aE = 0;
+					}else
+					{
+						aE = alpha*density*Area*Area/uCoeff[row*nColsU + col + 1];
+						bp += density*uExp[row*nColsU + col + 1]*Area;
+						aP += aE;
+					}
+				} else if(col == info->numCellsX - 1)
+				{
+					// We are at the RHS boundary and we know our grid is not solid
+					aE = alpha*density*Area*Area/uCoeff[row*nColsU + col + 1];
+					bp += density*uExp[row*nColsU + col + 1]*Area;
+					RHS[index] += -aE*o->PR;
+					aP += aE;
+					// Check that west grid is not solid. If it is set coeff to zero
+					if(Grid[index - 1] == 1)
+					{
+						aW = 0;
+					} else
+					{
+						aW = alpha*density*Area*Area/uCoeff[row*nColsU + col];
+						bp += -density*uExp[row*nColsU + col]*Area;
+						aP += aW;
+					}
+				} else
+				{
+					// we are not in any boundary
+					// Check if West is solid
+					if(Grid[index - 1] == 1)
+					{
+						aW = 0;
+					}else
+					{
+						aW = alpha*density*Area*Area/uCoeff[row*nColsU + col];
+						bp += -density*uExp[row*nColsU + col]*Area;
+						aP += aW;
+					}
+					// Do thhe same for East
+					if(Grid[index + 1] == 1)
+					{
+						aE = 0;
+					} else
+					{
+						aE = alpha*density*Area*Area/uCoeff[row*nColsU + col + 1];
+						bp += density*uExp[row*nColsU + col + 1]*Area;
+						aP += aE;
+					}
+				}
+				// Gather Coefficients into the linear system of eqs.
+				RHS[index] += bp;
+
+				A[index*5 + 0] = -aP;
+				A[index*5 + 1] = aW;
+				A[index*5 + 2] = aE;
+				A[index*5 + 3] = aS;
+				A[index*5 + 4] = aN;
+			}
+		}
+	}
+
+	// Solve
+
+	// Return
+
+	return 0;
+
+}
