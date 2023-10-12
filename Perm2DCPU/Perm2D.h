@@ -335,7 +335,7 @@ int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulation
 			norm_diff = 0;
 			for(index = 0; index < nCols*nRows; index++)
 			{
-				norm_diff += fabs((Pressure[index] - tempP[index])/(tempP[index]*(float)(nCols*nRows)));
+				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(float)(nCols*nRows)));
 			}
 			printf("RMS = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
 		}
@@ -788,8 +788,8 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 				}
 			}
 
-			printf("uExp[%d] = %1.6f\n", uRow*nColsU + uCol, uExp[uRow*nColsU + uCol]);
-			printf("uCoeff[%d] = %1.6f\n", uRow*nColsU + uCol, uCoeff[uRow*nColsU + uCol]);
+			// printf("uExp[%d] = %1.6f\n", uRow*nColsU + uCol, uExp[uRow*nColsU + uCol]);
+			// printf("uCoeff[%d] = %1.6f\n", uRow*nColsU + uCol, uCoeff[uRow*nColsU + uCol]);
 
 			// Check if V is in a solid interface. If not gather coefficients and calculate explicit component
 
@@ -1054,9 +1054,6 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 				A[index*5 + 2] = aE;
 				A[index*5 + 3] = aS;
 				A[index*5 + 4] = aN;
-
-				printf("A[%d] = %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, RHS =  %3.2f\n", index,
-					A[index*5 + 0], A[index*5 + 1], A[index*5 + 2], A[index*5 + 3], A[index*5 + 4], RHS[index]);
 			}
 		}
 	}
