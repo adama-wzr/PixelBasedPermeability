@@ -91,7 +91,7 @@ int printOptions(options* opts){
 	printf("Pressure Left = %.2f Pa\n", opts->PL);
 	printf("Pressure Right = %.2f Pa\n", opts->PR);
 	printf("Density = %.2f kg/m^3\n", opts->density);
-	printf("Kinematic Viscosity = %.2f m^2/s\n", opts->viscosity);
+	printf("Kinematic Viscosity = %.6f m^2/s\n", opts->viscosity);
 	printf("Mesh Refinement = %d\n", opts->MeshAmp);
 	printf("Relaxation Factor = %f\n", opts->alphaRelax);
 	printf("Maximum Iterations Solver = %ld\n", opts->MaxIterSolver);
@@ -662,53 +662,53 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			// fw and fe don't depend on corners
 			if (uCol == 0){
-				fwU = 1/2*density*A*u[uRow*nColsU + uCol];
-				feU = 1/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
+				fwU = 1.0/2*density*A*u[uRow*nColsU + uCol];
+				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
 			} else if(uCol == info->numCellsX){
-				fwU = 1/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
-				feU = 1/2*density*A*u[uRow*nColsU + uCol];
+				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
+				feU = 1.0/2*density*A*u[uRow*nColsU + uCol];
 			} else{
-				fwU = 1/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
-				feU = 1/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
+				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
+				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
 			}
 
 			// fs and fn depend on boundaries a lot more
 			if(uCol == 0 && uRow == 0){
 				// top left corner
-				fnU = 1/2*density*A*v[(nRowsV - 1)*nColsV + uCol];
-				fsU = 1/2*density*A*v[(uRow + 1)*nColsV + uCol];
+				fnU = 1.0/2*density*A*v[(nRowsV - 1)*nColsV + uCol];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol];
 			} else if(uCol == 0 && uRow == nRowsU - 1){
 				// bottom left
-				fsU = 1/2*density*A*v[0];
-				fnU = 1/2*density*A*v[(uRow+1)*nColsV + uCol];
+				fsU = 1.0/2*density*A*v[0];
+				fnU = 1.0/2*density*A*v[(uRow+1)*nColsV + uCol];
 			} else if(uCol == 0){
 				// Anywhere in left boundary
-				fnU = 1/2*density*A*v[uRow*nColsV + uCol];
-				fsU = 1/2*density*A*v[(uRow + 1)*nColsV + uCol];
+				fnU = 1.0/2*density*A*v[uRow*nColsV + uCol];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol];
 			} else if(uCol == nColsU - 1 && uRow == 0){
 				// top right corner
-				fnU = 1/2*density*A*v[(nRowsV - 1)*nColsV + uCol - 1];
-				fsU = 1/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
+				fnU = 1.0/2*density*A*v[(nRowsV - 1)*nColsV + uCol - 1];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			}else if(uCol == nColsU - 1 && uRow == nRowsU - 1){
 				// bottom right corner
-				fnU = 1/2*density*A*v[(uRow)*nColsV + uCol - 1];
-				fsU = 1/2*density*A*v[(0)*nColsV + uCol - 1];
+				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = 1.0/2*density*A*v[(0)*nColsV + uCol - 1];
 			} else if(uCol == nColsU - 1){
 				// right boundary
-				fnU = 1/2*density*A*v[(uRow)*nColsV + uCol - 1];
-				fsU = 1/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
+				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			} else if(uRow == 0){
 				// top boundary
-				fnU = 1/2*density*A*(v[(nRowsV - 1)*nColsV + uCol] + v[(nRowsV - 1)*nColsV + uCol - 1]);
-				fsU = 1/2*density*A*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1]);
+				fnU = 1.0/2*density*A*(v[(nRowsV - 1)*nColsV + uCol] + v[(nRowsV - 1)*nColsV + uCol - 1]);
+				fsU = 1.0/2*density*A*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1]);
 			} else if(uRow == nRowsU - 1){
 				// bottom boundary
-				fnU = 1/2*density*A*(v[uRow*nColsV + uCol] + v[uRow*nColsV + uCol - 1]);
-				fsU = 1/2*density*A*(v[uCol] + v[uCol - 1]);
+				fnU = 1.0/2*density*A*(v[uRow*nColsV + uCol] + v[uRow*nColsV + uCol - 1]);
+				fsU = 1.0/2*density*A*(v[uCol] + v[uCol - 1]);
 			} else{
 				// not a boundary
-				fsU = 1/2*density*A*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1]);
-				fnU = 1/2*density*A*(v[uRow*nColsV + uCol] + v[uRow*nColsV + uCol - 1]);
+				fsU = 1.0/2*density*A*(v[(uRow + 1)*nColsV + uCol] + v[(uRow + 1)*nColsV + uCol - 1]);
+				fnU = 1.0/2*density*A*(v[uRow*nColsV + uCol] + v[uRow*nColsV + uCol - 1]);
 			}
 			
 
@@ -716,25 +716,25 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			if (vRow == 0){
 				// top
-				fwV = 1/2*density*A*(u[vRow*nColsU + vCol] + u[(nRowsU - 1)*nColsU + vCol]);
-				feV = 1/2*density*A*(u[vRow*nColsU + vCol + 1] + u[(nRowsU - 1)*nColsU + vCol + 1]);
+				fwV = 1.0/2*density*A*(u[vRow*nColsU + vCol] + u[(nRowsU - 1)*nColsU + vCol]);
+				feV = 1.0/2*density*A*(u[vRow*nColsU + vCol + 1] + u[(nRowsU - 1)*nColsU + vCol + 1]);
 
-				fsV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow + 1)*nColsV + vCol]);
-				fnV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(nRowsV - 1)*nColsV + vCol]);
+				fsV = 1.0/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow + 1)*nColsV + vCol]);
+				fnV = 1.0/2*density*A*(v[vRow*nColsV + vCol] + v[(nRowsV - 1)*nColsV + vCol]);
 			} else if(vRow == nRowsV - 1){
 				// bottom
-				fwV = 1/2*density*A*(u[(vRow - 1)*nColsU + vCol] + u[(0)*nColsU + vCol]);
-				feV = 1/2*density*A*(u[(vRow - 1)*nColsU + vCol + 1] + u[(0)*nColsU + vCol + 1]);
+				fwV = 1.0/2*density*A*(u[(vRow - 1)*nColsU + vCol] + u[(0)*nColsU + vCol]);
+				feV = 1.0/2*density*A*(u[(vRow - 1)*nColsU + vCol + 1] + u[(0)*nColsU + vCol + 1]);
 
-				fsV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[vCol]);
-				fnV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow - 1)*nColsV + vCol]);
+				fsV = 1.0/2*density*A*(v[vRow*nColsV + vCol] + v[vCol]);
+				fnV = 1.0/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow - 1)*nColsV + vCol]);
 			} else{
 				// not a boundary
-				fwV = 1/2*density*A*(u[vRow*nColsU + vCol] + u[(vRow - 1)*nColsU + vCol]);
-				feV = 1/2*density*A*(u[vRow*nColsU + vCol + 1] + u[(vRow - 1)*nColsU + vCol + 1]);
+				fwV = 1.0/2*density*A*(u[vRow*nColsU + vCol] + u[(vRow - 1)*nColsU + vCol]);
+				feV = 1.0/2*density*A*(u[vRow*nColsU + vCol + 1] + u[(vRow - 1)*nColsU + vCol + 1]);
 
-				fsV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow + 1)*nColsV + vCol]);
-				fnV = 1/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow - 1)*nColsV + vCol]);
+				fsV = 1.0/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow + 1)*nColsV + vCol]);
+				fnV = 1.0/2*density*A*(v[vRow*nColsV + vCol] + v[(vRow - 1)*nColsV + vCol]);
 			}
 
 			// Check if U is in a solid interface. If not gather coefficients and calculate explicit component
@@ -757,6 +757,8 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 				DeltaF = feU - fwU + fnU - fsU;
 
+				// printf("DeltaF = %f\n", DeltaF);
+
 				// Store central coefficient
 
 				// Should we select these coefficient better according to boundaries?
@@ -765,7 +767,7 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 				// Initalize uExplicit as a component of the previous iterative step
 
-				uExp[uRow*nColsU + uCol] = (1 - o->alphaRelax)*u[uRow*nColsU + uCol];
+				uExp[uRow*nColsU + uCol] = (1.0f - o->alphaRelax)*u[uRow*nColsU + uCol];
 
 				// Increment uExp based on neighborhood
 
@@ -785,6 +787,9 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(awU*u[(uRow + 1)*nColsU + uCol]);
 				}
 			}
+
+			printf("uExp[%d] = %1.6f\n", uRow*nColsU + uCol, uExp[uRow*nColsU + uCol]);
+			printf("uCoeff[%d] = %1.6f\n", uRow*nColsU + uCol, uCoeff[uRow*nColsU + uCol]);
 
 			// Check if V is in a solid interface. If not gather coefficients and calculate explicit component
 
@@ -814,7 +819,7 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 				// Initalize vExplicit as a component of the previous iterative step
 
-				vExp[vRow*nColsV + vCol] = (1 - o->alphaRelax)*v[vRow*nColsV + vCol];
+				vExp[vRow*nColsV + vCol] = (1.0f - o->alphaRelax)*v[vRow*nColsV + vCol];
 
 				// Increment vExp based on neighborhood
 
@@ -1050,8 +1055,8 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 				A[index*5 + 3] = aS;
 				A[index*5 + 4] = aN;
 
-				// printf("A[%d] = %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, RHS =  %3.2f\n", index,
-				// 	A[index*5 + 0], A[index*5 + 1], A[index*5 + 2], A[index*5 + 3], A[index*5 + 4], RHS[index]);
+				printf("A[%d] = %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, RHS =  %3.2f\n", index,
+					A[index*5 + 0], A[index*5 + 1], A[index*5 + 2], A[index*5 + 3], A[index*5 + 4], RHS[index]);
 			}
 		}
 	}

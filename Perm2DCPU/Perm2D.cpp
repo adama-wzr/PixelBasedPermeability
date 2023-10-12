@@ -42,8 +42,8 @@ int main(void){
 	simInfo.numCellsX = width*opts.MeshAmp;			// Simulation Grid width in number of cells
 	simInfo.numCellsY = height*opts.MeshAmp;		// Simulation Grid height in number of cells
 	simInfo.nElements = simInfo.numCellsY*simInfo.numCellsX;	// Number of elements (total)
-	simInfo.dx = simInfo.numCellsX/opts.DomainWidth;			// dx
-	simInfo.dy = simInfo.numCellsY/opts.DomainHeight;			// dy
+	simInfo.dx = opts.DomainWidth/simInfo.numCellsX;			// dx
+	simInfo.dy = opts.DomainWidth/simInfo.numCellsY;			// dy
 
 	unsigned int *Grid = (unsigned int*)malloc(sizeof(int)*simInfo.numCellsX*simInfo.numCellsY);		// Array that will hold binary domain (solid vs fluid)
 
@@ -94,16 +94,25 @@ int main(void){
 
 	// Initialize arrays
 
-	memset(Pressure, (opts.PL + opts.PR)/2, sizeof(Pressure));		// Initialized to avg. between PL and PR
+	memset(Pressure, 0, sizeof(Pressure));		// Initialized to avg. between PL and PR
 
-	memset(uExp, 0.001, sizeof(uExp));									// Initialized to 0 because we will solve for it first step
 	memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
 
 	memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
 	memset(vCoeff, 0, sizeof(vCoeff));								// Initialized to 0 because we solve for it first step
 
 	memset(V, 0, sizeof(V));										// Initialize to 0 because it is the dominant flow
-	memset(U, 0.001, sizeof(U));									// Initialized to 0.001 just to help convergence
+
+	for(int row = 0; row<simInfo.numCellsY; row++){
+		for(int col = 0; col< simInfo.numCellsX+1; col++){
+			int index = row*(simInfo.numCellsX + 1) + col;
+			if(col < simInfo.numCellsX){
+				Pressure[row*(simInfo.numCellsX) + col] = (opts.PL + opts.PR)/2;
+			}
+			U[index] = 0.01;
+			uExp[index] = 0.01;
+		}	
+	}
 
 	// Now we use the SUV-CUT algorithm to solve velocity-pressure coupled
 
