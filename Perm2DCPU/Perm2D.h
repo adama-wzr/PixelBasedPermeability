@@ -1049,6 +1049,9 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 				A[index*5 + 2] = aE;
 				A[index*5 + 3] = aS;
 				A[index*5 + 4] = aN;
+
+				// printf("A[%d] = %3.2f, %3.2f, %3.2f, %3.2f, %3.2f, RHS =  %3.2f\n", index,
+				// 	A[index*5 + 0], A[index*5 + 1], A[index*5 + 2], A[index*5 + 3], A[index*5 + 4], RHS[index]);
 			}
 		}
 	}

@@ -96,7 +96,7 @@ int main(void){
 
 	memset(Pressure, (opts.PL + opts.PR)/2, sizeof(Pressure));		// Initialized to avg. between PL and PR
 
-	memset(uExp, 0, sizeof(uExp));									// Initialized to 0 because we will solve for it first step
+	memset(uExp, 0.001, sizeof(uExp));									// Initialized to 0 because we will solve for it first step
 	memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
 
 	memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
@@ -127,6 +127,8 @@ int main(void){
 		explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
 
 		implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &opts, &simInfo);
+
+		iter++;
 
 	}
 

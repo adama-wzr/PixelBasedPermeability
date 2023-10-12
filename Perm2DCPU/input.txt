@@ -4,14 +4,14 @@ DomainWidth: 0.1
 Dens: 1000
 Visc: 1e-6
 MeshAmp: 1
-InputName: 00000.jpg
+InputName: fluid.jpg
 PL: 100
 PR: 99
 RelaxFactor = 0.6
 OutputName: test.csv
 printMaps: 1
-MaxIterGlobal: 500000
+MaxIterGlobal: 1
 ResidualConv: 0.00001
-MaxIterSolver: 500000
+MaxIterSolver: 1
 SolverConv: 0.00001
 Verbose: 1
