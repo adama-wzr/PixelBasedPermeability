@@ -1070,3 +1070,18 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 	return 0;
 
 }
+
+
+int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, float* v,
+	float *uCoeff, float *vCoeff, float *Pressure, options* o, simulationInfo* info)
+{
+
+	
+	float dx, dy;
+	dx = info->dx;
+	dy = info->dy;
+	float alpha = o->alphaRelax;
+	float Area = dx*dy;
+
+
+}
