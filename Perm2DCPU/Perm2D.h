@@ -265,86 +265,90 @@ float calcPorosity(unsigned char* imageAddress, int Width, int Height){
 	return porosity;
 }
 
-int pJacobiCPU2D(double *arr, double *sol, double *x_vec, int iter_limit, double tolerance, int size){
-	int iteration_count = 0;
-	double *temp_x_vec = (double *)malloc(sizeof(double)*size*size);
-	double conv_stat = 1;
-	double sigma = 0;
-	double norm_diff;
-	double convergence_criteria = 1;
-	int i;
-	double Ax;
+int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulationInfo *info){
+	// Declare useful variables
+	int iterationCount = 0;
+	int iterLimit = o->MaxIterSolver;
+	float tolerance = o->ConvergenceSolver;
+	int nCols = info->numCellsX;
+	int nRows = info->numCellsY;
 
-	#pragma omp parallel private(i, sigma)
+	// Temporary Pressure Array
 
-	#pragma omp for
-	for (i = 0; i<size*size; i++){
-		temp_x_vec[i] = x_vec[i];
-		// temp_x_vec[i] = 0;
-	}
+	float *tempP = (float *)malloc(sizeof(float)*nCols*nRows);
 
-	while(convergence_criteria > tolerance && iteration_count < iter_limit){
-		#pragma omp parallel private(i, sigma)
+	memcpy(tempP, Pressure, sizeof(Pressure));	// Initialize temporary array to the same value as other array
+
+	// More runtime related variables
+	
+	float conv_stat = 1;
+	float sigma = 0;
+	float norm_diff;
+	float convergence_criteria = 1;
+	int index;
+
+	while(convergence_criteria > tolerance && iterationCount < iterLimit)
+	{
+		#pragma omp parallel private(index, sigma)
 		#pragma omp for
-		for(i = 0; i<size*size; i++){
+		for(index = 0; index<nCols*nRows; index++)
+		{
+			int myRow = index/nCols;
+			int myCol = index % nCols;
 			sigma = 0;
-			for(int j = 1; j<5; j++){
-				if(arr[i*5 + j] != 0){
-					if(j == 1){
-						sigma += arr[i*5 + j]*temp_x_vec[i - 1];
-					} else if(j == 2){
-						sigma += arr[i*5 + j]*temp_x_vec[i + 1];
-					} else if(j == 3){
-						sigma += arr[i*5 + j]*temp_x_vec[i + size];
-					} else if(j == 4){
-						sigma += arr[i*5 + j]*temp_x_vec[i - size];
+			for(int j = 1; j<5; j++)
+			{
+				if(arr[index*5 + j] != 0)
+				{
+					if(j == 1)
+					{
+						sigma += arr[index*5 + j]*tempP[index - 1];
+					}else if(j == 2)
+					{
+						sigma += arr[index*5 + j]*tempP[index + 1];
+					} else if(j == 3)
+					{
+						if(myRow == nRows - 1)
+						{
+							sigma += arr[index*5 + j]*tempP[myCol];
+						} else
+						{
+							sigma += arr[index*5 + j]*tempP[index + nCols];
+						}
+					} else if(j == 4)
+					{
+						if(myRow == 0)
+						{
+							sigma += arr[index*5 + j]*tempP[(nRows - 1)*nCols + myCol];
+						} else
+						{
+							sigma += arr[index*5 + j]*tempP[index - nCols];
+						}
 					}
 				}
 			}
-			x_vec[i] = 1/arr[i*5 + 0]*(sol[i] - sigma);
+			Pressure[index] = 1/arr[index*5 + 0]*(sol[index] - sigma);
 		}
 
-		// convergence
-
-		norm_diff = 0;
-
-		for(i = 0; i<size*size; i++){
-			norm_diff += fabs((x_vec[i] - temp_x_vec[i])/temp_x_vec[i])/(size*size);
-			temp_x_vec[i] = x_vec[i];
+		if(iterationCount % 1000 == 0)
+		{
+			norm_diff = 0;
+			for(index = 0; index < nCols*nRows; index++)
+			{
+				norm_diff += fabs((Pressure[index] - tempP[index])/(tempP[index]*(float)(nCols*nRows)));
+			}
+			printf("RMS = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
 		}
 
-		// norm_diff = 0;
-		// for ( i = 0; i < size*size; i++){
-		// 	// printf("x_vec[%d] = %1.2f\n", i, x_vec[i]);
-		// 	Ax = 0;
-		// 	for(int j = 0; j<5; j++){
-		// 		if(arr[i*5 + j] != 0){
-		// 			if(j == 0){
-		// 				Ax += arr[i*5 + j]*x_vec[i];
-		// 			} else if(j == 1){
-		// 				Ax += arr[i*5 + j]*x_vec[i - 1];
-		// 			} else if(j == 2){
-		// 				Ax += arr[i*5 + j]*x_vec[i + 1];
-		// 			} else if(j == 3){
-		// 				Ax += arr[i*5 + j]*x_vec[i + size];
-		// 			} else if(j == 4){
-		// 				Ax += arr[i*5 + j]*x_vec[i - size];
-		// 			}
-		// 		}
-		// 	}
-		// 	norm_diff += ((Ax-sol[i])*(Ax-sol[i]));
-		// 	temp_x_vec[i] = x_vec[i];
-		// }
-		// norm_diff = sqrt(norm_diff);
 		convergence_criteria = norm_diff;
-		if (iteration_count % 1000 == 0){
-			// printf("RMS = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
-		}
-		iteration_count++;
+
+		memcpy(tempP, Pressure, sizeof(Pressure));
+
+		iterationCount++;
+
 	}
 
-	free(temp_x_vec);
-	// printf("Total iterations = %d, norm diff = %.12f\n", iteration_count, norm_diff);
+	free(tempP);
 	return 0;
 }
 
@@ -1051,7 +1055,12 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 
 	// Solve
 
+	pJacobiCPU2D(A, RHS, Pressure, o, info);
+
 	// Return
+
+	free(A);
+	free(RHS);
 
 	return 0;
 
