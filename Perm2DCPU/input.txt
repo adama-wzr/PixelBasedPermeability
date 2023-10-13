@@ -7,7 +7,7 @@ MeshAmp: 1
 InputName: fluid.jpg
 PL: 100
 PR: 99
-RelaxFactor = 0.6
+RelaxFactor: 0.6
 OutputName: test.csv
 printMaps: 1
 MaxIterGlobal: 1

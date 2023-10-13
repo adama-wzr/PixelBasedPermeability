@@ -136,6 +136,8 @@ int main(void){
 		explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
 
 		implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &opts, &simInfo);
+		
+		momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &opts, &simInfo);
 
 		iter++;
 

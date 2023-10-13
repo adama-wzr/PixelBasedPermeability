@@ -1076,12 +1076,122 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 	float *uCoeff, float *vCoeff, float *Pressure, options* o, simulationInfo* info)
 {
 
+	/*
+	Momentum Correction:
+
+	Inputs:
+		- unsigned int *Grid: pointer to array holding boundary information
+		- float *uExp: pointer to array to store the explicit component of u-velocity
+		- float *vExp: pointer to array to store the explicit component of v-velocity
+		- float *u: poiner to array storing the u-velocity
+		- float *v: pointer to array storing the v-velocity
+		- float *uCoeff: pointer to array to store the central coefficient of every u-velocity
+		- float *vCoeff: pointer to array to store the central coefficient of every v-velocity
+		- float *Pressure: array containing the pressure at each step
+		- options* o: pointer to options data structure
+		- simulationInfo* info: pointer to simulationInfo data-structure
+	Outpus:
+		None.
+
+	Function will assemble a coefficient matrix and a RHS to implicitly solve for Pressure. The Pressure array is
+	modified with the final answer at this iterative step. 
+
+	*/
+
 	
 	float dx, dy;
 	dx = info->dx;
 	dy = info->dy;
 	float alpha = o->alphaRelax;
 	float Area = dx*dy;
+	float PL = o->PL;
+	float PR = o->PR;
 
+	// Useful indexing variables
+
+	int nColsU = info->numCellsX + 1;
+	int nColsV = info->numCellsY;
+	int nColsP = info->numCellsY;
+
+	int nRowsV = info->numCellsY+1;
+	int nRowsU = info->numCellsY;
+
+	int uRow, uCol, vRow, vCol;
+
+	// Explicit Velocity Correction
+
+	for(int i = 0; i<info->numCellsX+1; i++){
+		for(int j = 0; j<info->numCellsY; j++){
+			uRow = j;
+			uCol = i;
+
+			vRow = i;
+			vCol = j;
+
+			// Update U
+
+			if(uCol == 0)
+			{
+				if(Grid[uRow*nColsP + uCol] == 1)
+				{
+					u[uRow*nColsU + uCol] = 0;
+				} else
+				{
+					u[uRow*nColsU + uCol] = uExp[uRow*nColsU + uCol] + alpha*Area/uCoeff[uRow*nColsU + uCol]*(PL - Pressure[uRow*nColsU + uCol]);
+				}
+			}else if(uCol == info->numCellsX)
+			{
+				if(Grid[uRow*nColsP + uCol - 1] == 1)
+				{
+					u[uRow*nColsU + uCol] = 0;
+				}else
+				{
+					u[uRow*nColsU + uCol] = uExp[uRow*nColsU + uCol] + alpha*Area/uCoeff[uRow*nColsU + uCol]*(Pressure[uRow*nColsU + uCol - 1] - PR);
+				}
+			} else
+			{
+				if(Grid[uRow*nColsP + uCol] == 1 || Grid[uRow*nColsP + uCol - 1] == 1)
+				{
+					u[uRow*nColsU + uCol] = 0;
+				}else
+				{
+					u[uRow*nColsU + uCol] = uExp[uRow*nColsU + uCol] + alpha*Area/uCoeff[uRow*nColsU + uCol]*(Pressure[uRow*nColsU + uCol - 1] - Pressure[uRow*nColsU + uCol]);
+				}
+			}
+
+			// Update V
+
+			if(vRow == 0)
+			{
+				if(Grid[vRow*nColsV + vCol] == 1 || Grid[(nRowsV - 1)*nColsV + vCol] == 1)
+				{
+					v[vRow*nColsV + vCol] = 0;
+				} else
+				{
+					v[vRow*nColsV + vCol] = vExp[vRow*nColsV + vCol] + alpha*Area/vCoeff[vRow*nColsV + vCol]*(Pressure[vRow*nColsV + vCol] - Pressure[(nRowsV - 1)*nColsV + vCol]);
+				}
+			} else if(vRow == nRowsV - 1)
+			{
+				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[vCol] == 1)
+				{
+					v[vRow*nColsV + vCol] = 0;
+				} else
+				{
+					v[vRow*nColsV + vCol] = vExp[vRow*nColsV + vCol] + alpha*Area/vCoeff[vRow*nColsV + vCol]*(Pressure[vCol] - Pressure[(vRow - 1)*nColsV + vCol]);
+				}
+			} else
+			{
+				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[(vRow)*nColsV + vCol] == 1)
+				{
+					v[vRow*nColsV + vCol] = 0;
+				}else
+				{
+					v[vRow*nColsV + vCol] = vExp[vRow*nColsV + vCol] + alpha*Area/vCoeff[vRow*nColsV + vCol]*(Pressure[vRow*nColsV + vCol] - Pressure[(vRow - 1)*nColsV + vCol]);
+				}
+			}
+		}
+	}
+
+	return 0;
 
 }
