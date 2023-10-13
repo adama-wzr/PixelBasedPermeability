@@ -265,6 +265,46 @@ float calcPorosity(unsigned char* imageAddress, int Width, int Height){
 	return porosity;
 }
 
+
+int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo *info){
+	/*
+		printPUVmaps
+		Inputs:
+			- float* Pressure: pointer to array containing Pressure data
+			- float* u: pointer to array containing the x-component of velocity
+			- float* v: pointer to array containing the y-component of velocity
+			- options* o: pointer to datastructure containing user entered options
+			- simulationInfo *info: pointer to datastructure containing simulation info
+
+		Output:
+			- None
+
+		Function prints maps to a .csv file (user entered filename).
+	*/
+
+	FILE *MAP;
+	MAP = fopen(o->outputFilename, "w");
+
+	fprintf(MAP, "P,U,V,x,y\n");
+
+	int nColsU = info->numCellsX + 1;
+	int nColsV = info->numCellsX;
+	int nColsP = info->numCellsX;
+
+	for(int i = 0; i<info->numCellsY; i++){
+		for(int j = 0; j<info->numCellsX; j++){
+			float uc = (u[i*nColsU + j] + u[i*nColsU + j + 1])/2;
+			float vc = (v[(i + 1)*nColsV + j] + v[i*nColsV + j])/2;
+			fprintf(MAP,"%f,%f,%f,%d,%d\n", Pressure[i*nColsP + j], uc, vc, j, i);
+		}
+	}
+
+	fclose(MAP);
+
+	return 0;
+}
+
+
 int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulationInfo *info){
 	// Declare useful variables
 	int iterationCount = 0;
