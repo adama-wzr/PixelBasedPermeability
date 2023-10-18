@@ -107,7 +107,8 @@ int main(void){
 		for(int col = 0; col< simInfo.numCellsX+1; col++){
 			int index = row*(simInfo.numCellsX + 1) + col;
 			if(col < simInfo.numCellsX){
-				Pressure[row*(simInfo.numCellsX) + col] = (opts.PL + opts.PR)/2;
+				// Pressure[row*(simInfo.numCellsX) + col] = (opts.PL + opts.PR)/2;
+				Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(opts.PL - opts.PR) + opts.PR;
 			}
 			U[index] = 0.01;
 			uExp[index] = 0.01;
@@ -133,6 +134,8 @@ int main(void){
 
 		*/
 
+		printf("Global Iter: %ld\n\n", iter+1);
+
 		explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
 
 		implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &opts, &simInfo);
@@ -140,7 +143,6 @@ int main(void){
 		momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &opts, &simInfo);
 
 		iter++;
-
 	}
 
 	if(opts.printMaps == 1){

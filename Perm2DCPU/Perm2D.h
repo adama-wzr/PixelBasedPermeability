@@ -306,6 +306,19 @@ int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo
 
 
 int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulationInfo *info){
+
+	/*
+	
+	Indexing is as follows:
+	
+	P = 0
+	W = 1
+	E = 2
+	S = 3
+	N = 4
+
+
+	*/
 	// Declare useful variables
 	int iterationCount = 0;
 	int iterLimit = o->MaxIterSolver;
@@ -317,20 +330,22 @@ int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulation
 
 	float *tempP = (float *)malloc(sizeof(float)*nCols*nRows);
 
-	memcpy(tempP, Pressure, sizeof(Pressure));	// Initialize temporary array to the same value as other array
+	for(int i = 0; i<nCols*nRows; i++){
+		tempP[i] = Pressure[i];
+	}
 
 	// More runtime related variables
 	
 	float conv_stat = 1;
-	float sigma = 0;
+	float sigma = 0.0;
 	float norm_diff;
 	float convergence_criteria = 1;
 	int index;
 
 	while(convergence_criteria > tolerance && iterationCount < iterLimit)
 	{
-		#pragma omp parallel private(index, sigma)
-		#pragma omp for
+		// #pragma omp parallel private(index, sigma)
+		// #pragma omp for
 		for(index = 0; index<nCols*nRows; index++)
 		{
 			int myRow = index/nCols;
@@ -367,7 +382,7 @@ int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulation
 					}
 				}
 			}
-			Pressure[index] = 1/arr[index*5 + 0]*(sol[index] - sigma);
+			Pressure[index] = 1.0/arr[index*5 + 0]*(sol[index] - sigma);
 		}
 
 		if(iterationCount % 1000 == 0)
@@ -375,14 +390,16 @@ int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulation
 			norm_diff = 0;
 			for(index = 0; index < nCols*nRows; index++)
 			{
-				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(float)(nCols*nRows)));
+				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));
 			}
 			printf("RMS = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
 		}
 
 		convergence_criteria = norm_diff;
 
-		memcpy(tempP, Pressure, sizeof(Pressure));
+		for(int i = 0; i<nCols*nRows; i++){
+			tempP[i] = Pressure[i];
+		}
 
 		iterationCount++;
 
@@ -702,11 +719,11 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			// fw and fe don't depend on corners
 			if (uCol == 0){
-				fwU = 1.0/2*density*A*u[uRow*nColsU + uCol];
+				fwU = density*A*u[uRow*nColsU + uCol];
 				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
-			} else if(uCol == info->numCellsX){
+			} else if(uCol == nColsU -1){
 				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
-				feU = 1.0/2*density*A*u[uRow*nColsU + uCol];
+				feU = density*A*u[uRow*nColsU + uCol];
 			} else{
 				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
 				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
@@ -715,28 +732,28 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 			// fs and fn depend on boundaries a lot more
 			if(uCol == 0 && uRow == 0){
 				// top left corner
-				fnU = 1.0/2*density*A*v[(nRowsV - 1)*nColsV + uCol];
-				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol];
+				fnU = density*A*v[(nRowsV - 1)*nColsV + uCol];
+				fsU = density*A*v[(uRow + 1)*nColsV + uCol];
 			} else if(uCol == 0 && uRow == nRowsU - 1){
 				// bottom left
-				fsU = 1.0/2*density*A*v[0];
-				fnU = 1.0/2*density*A*v[(uRow+1)*nColsV + uCol];
+				fsU = density*A*v[0];
+				fnU = density*A*v[(uRow+1)*nColsV + uCol];
 			} else if(uCol == 0){
 				// Anywhere in left boundary
-				fnU = 1.0/2*density*A*v[uRow*nColsV + uCol];
-				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol];
+				fnU = density*A*v[uRow*nColsV + uCol];
+				fsU = density*A*v[(uRow + 1)*nColsV + uCol];
 			} else if(uCol == nColsU - 1 && uRow == 0){
 				// top right corner
-				fnU = 1.0/2*density*A*v[(nRowsV - 1)*nColsV + uCol - 1];
-				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
+				fnU = density*A*v[(nRowsV - 1)*nColsV + uCol - 1];
+				fsU = density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			}else if(uCol == nColsU - 1 && uRow == nRowsU - 1){
 				// bottom right corner
-				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
-				fsU = 1.0/2*density*A*v[(0)*nColsV + uCol - 1];
+				fnU = density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = density*A*v[(0)*nColsV + uCol - 1];
 			} else if(uCol == nColsU - 1){
 				// right boundary
-				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
-				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
+				fnU = density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			} else if(uRow == 0){
 				// top boundary
 				fnU = 1.0/2*density*A*(v[(nRowsV - 1)*nColsV + uCol] + v[(nRowsV - 1)*nColsV + uCol - 1]);
@@ -821,11 +838,22 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 				if(uRow != 0){
 					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(anU*u[(uRow - 1)*nColsU + uCol]);
+				} else{
+					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(anU*u[(nRowsU - 1)*nColsU + uCol]);
 				}
 
 				if(uRow != nRowsU - 1){
-					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(awU*u[(uRow + 1)*nColsU + uCol]);
+					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(asU*u[(uRow + 1)*nColsU + uCol]);
+				} else{
+					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(asU*u[(0)*nColsU + uCol]);
 				}
+
+				// if(uCol == 0 || uCol == nColsU - 1){
+				// 	uExp[uRow*nColsU + uCol] = 0.00;
+				// }
+				// if(uCol == 0){
+				// 	uExp[uRow*nColsU + uCol] = 0.00;
+				// }
 			}
 
 			// printf("uExp[%d] = %1.6f\n", uRow*nColsU + uCol, uExp[uRow*nColsU + uCol]);
@@ -864,20 +892,29 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 				// Increment vExp based on neighborhood
 
 				if(vCol != 0){
-					vExp[vRow*nColsV + vCol] = o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(awV*v[vRow*nColsV + vCol - 1]);
+					vExp[vRow*nColsV + vCol] += o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(awV*v[vRow*nColsV + vCol - 1]);
 				}
 
 				if(vCol != nColsV-1){
-					vExp[vRow*nColsV + vCol] = o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(aeV*v[vRow*nColsV + vCol + 1]);
+					vExp[vRow*nColsV + vCol] += o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(aeV*v[vRow*nColsV + vCol + 1]);
 				}
 
 				if(vRow != 0){
-					vExp[vRow*nColsV + vCol] = o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(anV*v[(vRow - 1)*nColsV + vCol]);
+					vExp[vRow*nColsV + vCol] += o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(anV*v[(vRow - 1)*nColsV + vCol]);
+				} else{
+					vExp[vRow*nColsV + vCol] += o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(anV*v[(nRowsV - 1)*nColsV + vCol]);
 				}
 
 				if(vRow != nRowsV - 1){
-					vExp[vRow*nColsV + vCol] = o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(asV*v[(vRow + 1)*nColsV + vCol]);
+					vExp[vRow*nColsV + vCol] += o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(asV*v[(vRow + 1)*nColsV + vCol]);
+				} else{
+					vExp[vRow*nColsV + vCol] += o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(asV*v[(0)*nColsV + vCol]);
 				}
+
+				// if(vCol == nColsV - 1){
+				// 	printf("vExp[row = %d, col = %d] = %f\n", vRow, vCol, vExp[vRow*nColsV + vCol]);
+				// 	printf("vCoeff[row = %d, col = %d] = %f\n", vRow, vCol, vCoeff[vRow*nColsV + vCol]);
+				// }
 			} // end of if statement
 
 		}
@@ -963,6 +1000,11 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 			// Check if P[index] is solid. If so, equation is P = 0 (central coeff = 1, RHS = 0)
 			if(Grid[index] == 1){
 				A[index*5 + 0] = 1;
+				A[index*5 + 1] = 0;
+				A[index*5 + 2] = 0;
+				A[index*5 + 3] = 0;
+				A[index*5 + 4] = 0;
+				RHS[index] = 0;
 			}else
 			{ 
 				// If central point is not solid, then we proceed normally
@@ -1034,8 +1076,9 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 					aW = alpha*density*Area*Area/uCoeff[row*nColsU + col];
 					bp += -density*uExp[row*nColsU + col]*Area;
 					RHS[index] += -aW*o->PL;
-					aP += aW;
-					// Check that east grid is not solid. If it is set coeff to zero
+					// aP += aW;
+					aW = 0;
+					// Check that east grid is not solid. If it is, set coeff to zero
 					if(Grid[index + 1] == 1)
 					{
 						aE = 0;
@@ -1051,7 +1094,8 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 					aE = alpha*density*Area*Area/uCoeff[row*nColsU + col + 1];
 					bp += density*uExp[row*nColsU + col + 1]*Area;
 					RHS[index] += -aE*o->PR;
-					aP += aE;
+					// aP += aE;
+					aE = 0;
 					// Check that west grid is not solid. If it is set coeff to zero
 					if(Grid[index - 1] == 1)
 					{
@@ -1087,6 +1131,7 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 					}
 				}
 				// Gather Coefficients into the linear system of eqs.
+
 				RHS[index] += bp;
 
 				A[index*5 + 0] = -aP;
@@ -1094,6 +1139,22 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 				A[index*5 + 2] = aE;
 				A[index*5 + 3] = aS;
 				A[index*5 + 4] = aN;
+
+				if(col == 0){
+					A[index*5 + 0] = -1;
+					A[index*5 + 1] = 0;
+					A[index*5 + 2] = 0;
+					A[index*5 + 3] = 0;
+					A[index*5 + 4] = 0;
+					RHS[index] = -o->PL;
+				} else if(col == nColsP - 1){
+					A[index*5 + 0] = -1;
+					A[index*5 + 1] = 0;
+					A[index*5 + 2] = 0;
+					A[index*5 + 3] = 0;
+					A[index*5 + 4] = 0;
+					RHS[index] = -o->PR;
+				}
 			}
 		}
 	}
@@ -1103,6 +1164,22 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 	pJacobiCPU2D(A, RHS, Pressure, o, info);
 
 	// Return
+
+	FILE *MAP;
+	MAP = fopen("ExpUV_mod.csv", "w");
+
+	fprintf(MAP, "P,U,V,x,y\n");
+
+	for(int i = 0; i<info->numCellsY; i++){
+		for(int j = 0; j<info->numCellsX; j++){
+			float uc = (uExp[i*nColsU + j] + uExp[i*nColsU + j + 1])/2;
+			float vc = (vExp[(i + 1)*nColsV + j] + vExp[i*nColsV + j])/2;
+			fprintf(MAP,"%f,%f,%f,%d,%d\n", Pressure[i*nColsP + j], uc, vc, j, i);
+		}
+	}
+
+	fclose(MAP);
+
 
 	free(A);
 	free(RHS);
@@ -1155,6 +1232,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 
 	int nRowsV = info->numCellsY+1;
 	int nRowsU = info->numCellsY;
+	int nRowsP = info->numCellsY;
 
 	int uRow, uCol, vRow, vCol;
 
@@ -1177,7 +1255,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 					u[uRow*nColsU + uCol] = 0;
 				} else
 				{
-					u[uRow*nColsU + uCol] = uExp[uRow*nColsU + uCol] + alpha*Area/uCoeff[uRow*nColsU + uCol]*(PL - Pressure[uRow*nColsU + uCol]);
+					u[uRow*nColsU + uCol] = uExp[uRow*nColsU + uCol] + alpha*Area/uCoeff[uRow*nColsU + uCol]*(PL - Pressure[uRow*nColsP + uCol]);
 				}
 			}else if(uCol == info->numCellsX)
 			{
@@ -1186,7 +1264,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 					u[uRow*nColsU + uCol] = 0;
 				}else
 				{
-					u[uRow*nColsU + uCol] = uExp[uRow*nColsU + uCol] + alpha*Area/uCoeff[uRow*nColsU + uCol]*(Pressure[uRow*nColsU + uCol - 1] - PR);
+					u[uRow*nColsU + uCol] = uExp[uRow*nColsU + uCol] + alpha*Area/uCoeff[uRow*nColsU + uCol]*(Pressure[uRow*nColsP + uCol - 1] - PR);
 				}
 			} else
 			{
@@ -1195,7 +1273,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 					u[uRow*nColsU + uCol] = 0;
 				}else
 				{
-					u[uRow*nColsU + uCol] = uExp[uRow*nColsU + uCol] + alpha*Area/uCoeff[uRow*nColsU + uCol]*(Pressure[uRow*nColsU + uCol - 1] - Pressure[uRow*nColsU + uCol]);
+					u[uRow*nColsU + uCol] = uExp[uRow*nColsU + uCol] + alpha*Area/uCoeff[uRow*nColsU + uCol]*(Pressure[uRow*nColsP + uCol - 1] - Pressure[uRow*nColsP + uCol]);
 				}
 			}
 
@@ -1203,12 +1281,12 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 
 			if(vRow == 0)
 			{
-				if(Grid[vRow*nColsV + vCol] == 1 || Grid[(nRowsV - 1)*nColsV + vCol] == 1)
+				if(Grid[vRow*nColsV + vCol] == 1 || Grid[(nRowsP - 1)*nColsV + vCol] == 1)
 				{
 					v[vRow*nColsV + vCol] = 0;
 				} else
 				{
-					v[vRow*nColsV + vCol] = vExp[vRow*nColsV + vCol] + alpha*Area/vCoeff[vRow*nColsV + vCol]*(Pressure[vRow*nColsV + vCol] - Pressure[(nRowsV - 1)*nColsV + vCol]);
+					v[vRow*nColsV + vCol] = vExp[vRow*nColsV + vCol] + alpha*Area/vCoeff[vRow*nColsV + vCol]*(Pressure[vRow*nColsP + vCol] - Pressure[(nRowsP - 1)*nColsP + vCol]);
 				}
 			} else if(vRow == nRowsV - 1)
 			{
@@ -1217,7 +1295,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 					v[vRow*nColsV + vCol] = 0;
 				} else
 				{
-					v[vRow*nColsV + vCol] = vExp[vRow*nColsV + vCol] + alpha*Area/vCoeff[vRow*nColsV + vCol]*(Pressure[vCol] - Pressure[(vRow - 1)*nColsV + vCol]);
+					v[vRow*nColsV + vCol] = vExp[vRow*nColsV + vCol] + alpha*Area/vCoeff[vRow*nColsV + vCol]*(Pressure[vCol] - Pressure[(vRow - 1)*nColsP + vCol]);
 				}
 			} else
 			{
@@ -1226,11 +1304,26 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 					v[vRow*nColsV + vCol] = 0;
 				}else
 				{
-					v[vRow*nColsV + vCol] = vExp[vRow*nColsV + vCol] + alpha*Area/vCoeff[vRow*nColsV + vCol]*(Pressure[vRow*nColsV + vCol] - Pressure[(vRow - 1)*nColsV + vCol]);
+					v[vRow*nColsV + vCol] = vExp[vRow*nColsV + vCol] + alpha*Area/vCoeff[vRow*nColsV + vCol]*(Pressure[vRow*nColsP + vCol] - Pressure[(vRow - 1)*nColsP + vCol]);
 				}
 			}
 		}
 	}
+
+	FILE *MAP;
+	MAP = fopen("UV.csv", "w");
+
+	fprintf(MAP, "P,U,V,x,y\n");
+
+	for(int i = 0; i<info->numCellsY; i++){
+		for(int j = 0; j<info->numCellsX; j++){
+			float uc = (u[i*nColsU + j] + u[i*nColsU + j + 1])/2;
+			float vc = (v[(i + 1)*nColsV + j] + v[i*nColsV + j])/2;
+			fprintf(MAP,"%f,%f,%f,%d,%d\n", Pressure[i*nColsP + j], uc, vc, j, i);
+		}
+	}
+
+	fclose(MAP);
 
 	return 0;
 
