@@ -308,6 +308,27 @@ int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo
 int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulationInfo *info){
 
 	/*
+		Function pJacobiCPU2D
+		
+		Inputs:
+			- float *arr: pointer to array containing the coefficient matrix
+			- float *sol: pointer to the RHS of the discretization
+			- float *Pressure: pointer to the Pressure array
+			- options *o: pointer to datastructure of user entered options
+			- simulationInfo *info: datastructure of simulation and domain parameters
+
+		Outputs:
+			- None
+
+		Function will solved the linear system of equations Arr*Pressure = RHS for Pressure using
+		the Jacobi Iteration method. The coefficient matrix (arr) is only 5 diagonals. Note that at the top
+		and bottom of the domain, the boundary is periodic. This means an adjustment must be made
+		to the coefficient matrix to make sure we are multiplying the correct Pressures.
+
+		This algorithm also uses a simple openMP parallelization.
+	*/
+
+	/*
 	
 	Indexing is as follows:
 	
@@ -344,8 +365,8 @@ int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulation
 
 	while(convergence_criteria > tolerance && iterationCount < iterLimit)
 	{
-		// #pragma omp parallel private(index, sigma)
-		// #pragma omp for
+		#pragma omp parallel private(index, sigma)
+		#pragma omp for
 		for(index = 0; index<nCols*nRows; index++)
 		{
 			int myRow = index/nCols;
