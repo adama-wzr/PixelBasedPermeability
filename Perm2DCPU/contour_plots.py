@@ -6,18 +6,10 @@ import matplotlib.image as mpimg
 # simulation properties
 
 grid_size = 128*2
-Re = 3200
-
-# material properties
-
-density = 998.2
-viscosity = 0.0010016
-Width = 0.1
-
-U_lid = Re*viscosity/(density*Width)
 
 # df1 = pd.read_csv("ExpUV_mod.csv")
-df1 = pd.read_csv("UV.csv")
+# df1 = pd.read_csv("UV.csv")
+df1 = pd.read_csv("test.csv")
 # get raw data from csv files
 
 raw_data = df1[["P", "U", "V", "x", "y"]].to_numpy()
@@ -31,6 +23,24 @@ U = np.reshape(U, [grid_size,grid_size])
 V = raw_data[:,2]
 V = np.reshape(V, [grid_size,grid_size])
 
+# Post-Process P, add a mask where P = 0 (solid)
+
+(m,n) = P.shape
+
+mask = np.zeros_like(P, dtype=bool)
+
+for i in range(m):
+	for j in range(n):
+		if P[i][j] < 1:
+			mask[i][j] = True		
+
+
+
+P = np.ma.array(P, mask=mask)
+U = np.ma.array(U, mask=mask)
+V = np.ma.array(V, mask=mask)
+
+# Create the mesh grid
 
 Xp, Yp = np.meshgrid(np.linspace(0, 0.1, grid_size), np.linspace(0.1, 0, grid_size))
 
