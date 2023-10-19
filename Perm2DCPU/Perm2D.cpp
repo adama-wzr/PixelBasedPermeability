@@ -138,6 +138,7 @@ int main(void){
 			printf("Global Iter: %ld\n\n", iter+1);
 		}else{
 			printf("Global Iter: %ld\n", iter+1);
+			printf("Permeability: %f\n", simInfo.Perm);
 			printf("Continuity RMS: %f\n\n", RMS);
 		}
 		
@@ -149,6 +150,8 @@ int main(void){
 		momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &opts, &simInfo);
 
 		RMS = ResidualContinuity(U, V, &opts, &simInfo);
+
+		PermCalc(U, &opts, &simInfo);
 
 		iter++;
 	}

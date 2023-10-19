@@ -306,6 +306,7 @@ int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo
 	return 0;
 }
 
+
 float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 	/*
 		Funcion ResidualContinuity:
@@ -355,6 +356,34 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 	// R = R/(info->numCellsY*info->numCellsX);
 
 	return R;
+}
+
+
+int PermCalc(float *U, options *o, simulationInfo *info){
+
+	float QL = 0;
+	float QR = 0;
+	float dx, dy;
+	dx = info->dx;
+	dy = info->dy;
+	float Area = dx*dy;	// this is the cross-sectional area of each cell
+	float viscosity = o->viscosity;
+
+	int nRowsU = info->numCellsY;
+	int nColsU = info->numCellsX + 1;
+
+	for(int row = 0; row<nRowsU; row++){
+		QL += U[row*nColsU + 0]*Area;
+		QR += U[row*nColsU + (nColsU - 1)]*Area;
+	}
+
+	printf("QL = %f, QR = %f\n", QL, QR);
+
+	float Qavg = (QL + QR)/2;
+
+	info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/(o->PL - o->PR);
+
+	return 0;
 }
 
 
