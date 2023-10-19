@@ -45,7 +45,9 @@ typedef struct{
 	float porosity;
 	float gpuTime;
 	float Perm;
-	float Convergence;
+	float ResidualX;
+	float ResidualY;
+	float ResidualP;
 }simulationInfo;
 
 
@@ -302,6 +304,57 @@ int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo
 	fclose(MAP);
 
 	return 0;
+}
+
+float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
+	/*
+		Funcion ResidualContinuity:
+
+		Inputs:
+			- float *U: pointer to array with x component of velocities
+			- float *V: pointer to array with v components of velocities
+			- options *o: pointer to array with user-entered options
+			- simulationInfo *info: pointer to array with simulation domain information
+
+		Outputs:
+			- None
+
+		Function will calculate residual convergence in the continuity equation, and each iterative step is normalized by 
+		the absolute value of the RHS summed over all cells for that iterative step.
+	*/
+
+	// Domain variables
+
+	float dx, dy;
+	dx = info->dx;
+	dy = info->dy;
+	float Area = dx*dy;
+
+	// Useful indexing variables
+
+	int nColsU = info->numCellsX + 1;
+	int nColsV = info->numCellsY;
+
+	int nRowsV = info->numCellsY+1;
+	int nRowsU = info->numCellsY;
+
+	// Properties
+
+	float density = o->density;
+
+	// Iterate through the entire domain
+
+	float R = 0; 	// variable used to store the residual
+
+	for(int row = 0; row<info->numCellsY; row++){
+		for(int col = 0; col<info->numCellsX; col++){
+			R += density*Area*fabs(U[row*nColsU + col] - U[row*nColsU + col + 1] + V[(row + 1)*nColsV + col] - V[row*nColsV + col]);
+		}
+	}
+
+	// R = R/(info->numCellsY*info->numCellsX);
+
+	return R;
 }
 
 
