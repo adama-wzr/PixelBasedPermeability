@@ -8,12 +8,12 @@ import matplotlib.image as mpimg
 grid_size = 128*2
 
 # Read image
-imgName = "00010.jpg"
+imgName = "00000.jpg"
 img = np.uint8(mpimg.imread(imgName))
 
 # df1 = pd.read_csv("ExpUV_mod.csv")
 # df1 = pd.read_csv("UV.csv")
-df1 = pd.read_csv("Circles00010_sim.csv")
+df1 = pd.read_csv("Circles00000_sim.csv")
 # get raw data from csv files
 
 raw_data = df1[["P", "U", "V", "x", "y"]].to_numpy()
