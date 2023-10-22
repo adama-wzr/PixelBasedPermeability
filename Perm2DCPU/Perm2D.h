@@ -322,7 +322,7 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 			- simulationInfo *info: pointer to array with simulation domain information
 
 		Outputs:
-			- None
+			- Residual
 
 		Function will calculate residual convergence in the continuity equation, and each iterative step is normalized by 
 		the absolute value of the RHS summed over all cells for that iterative step.
@@ -353,7 +353,7 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 
 	for(int row = 0; row<info->numCellsY; row++){
 		for(int col = 0; col<info->numCellsX; col++){
-			R += density*Area*fabs(U[row*nColsU + col] - U[row*nColsU + col + 1] + V[(row + 1)*nColsV + col] - V[row*nColsV + col]);
+			R += density*Area*fabs(U[row*nColsU + col] - U[row*nColsU + col + 1]) + fabs(V[(row + 1)*nColsV + col] - V[row*nColsV + col]);
 		}
 	}
 
@@ -364,6 +364,19 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 
 
 int PermCalc(float *U, options *o, simulationInfo *info){
+	/*
+		Funcion PermCalc:
+
+		Inputs:
+			- float *U: pointer to array with x component of velocities
+			- options *o: pointer to array with user-entered options
+			- simulationInfo *info: pointer to array with simulation domain information
+
+		Outputs:
+			- None
+
+		Function will calculate the normalized permeability at each step.
+	*/
 
 	float QL = 0;
 	float QR = 0;
@@ -383,8 +396,8 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 
 	float Qavg = (QL + QR)/2;
 
-	info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR)*Area);
-
+	// info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR));
+	info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx);
 	return 0;
 }
 
