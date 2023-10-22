@@ -381,11 +381,9 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 		QR += U[row*nColsU + (nColsU - 1)]*Area;
 	}
 
-	printf("QL = %f, QR = %f\n", QL, QR);
-
 	float Qavg = (QL + QR)/2;
 
-	info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/(o->PL - o->PR);
+	info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR)*Area);
 
 	return 0;
 }
@@ -492,7 +490,7 @@ int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulation
 			Pressure[index] = 1.0/arr[index*5 + 0]*(sol[index] - sigma);
 		}
 
-		if(iterationCount % 1000 == 0)
+		if(iterationCount % 10000 == 0)
 		{
 			norm_diff = 0;
 			for(index = 0; index < nCols*nRows; index++)
@@ -1272,20 +1270,20 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 
 	// Return
 
-	FILE *MAP;
-	MAP = fopen("ExpUV_mod.csv", "w");
+	// FILE *MAP;
+	// MAP = fopen("ExpUV_mod.csv", "w");
 
-	fprintf(MAP, "P,U,V,x,y\n");
+	// fprintf(MAP, "P,U,V,x,y\n");
 
-	for(int i = 0; i<info->numCellsY; i++){
-		for(int j = 0; j<info->numCellsX; j++){
-			float uc = (uExp[i*nColsU + j] + uExp[i*nColsU + j + 1])/2;
-			float vc = (vExp[(i + 1)*nColsV + j] + vExp[i*nColsV + j])/2;
-			fprintf(MAP,"%f,%f,%f,%d,%d\n", Pressure[i*nColsP + j], uc, vc, j, i);
-		}
-	}
+	// for(int i = 0; i<info->numCellsY; i++){
+	// 	for(int j = 0; j<info->numCellsX; j++){
+	// 		float uc = (uExp[i*nColsU + j] + uExp[i*nColsU + j + 1])/2;
+	// 		float vc = (vExp[(i + 1)*nColsV + j] + vExp[i*nColsV + j])/2;
+	// 		fprintf(MAP,"%f,%f,%f,%d,%d\n", Pressure[i*nColsP + j], uc, vc, j, i);
+	// 	}
+	// }
 
-	fclose(MAP);
+	// fclose(MAP);
 
 
 	free(A);
@@ -1417,20 +1415,20 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 		}
 	}
 
-	FILE *MAP;
-	MAP = fopen("UV.csv", "w");
+	// FILE *MAP;
+	// MAP = fopen("UV.csv", "w");
 
-	fprintf(MAP, "P,U,V,x,y\n");
+	// fprintf(MAP, "P,U,V,x,y\n");
 
-	for(int i = 0; i<info->numCellsY; i++){
-		for(int j = 0; j<info->numCellsX; j++){
-			float uc = (u[i*nColsU + j] + u[i*nColsU + j + 1])/2;
-			float vc = (v[(i + 1)*nColsV + j] + v[i*nColsV + j])/2;
-			fprintf(MAP,"%f,%f,%f,%d,%d\n", Pressure[i*nColsP + j], uc, vc, j, i);
-		}
-	}
+	// for(int i = 0; i<info->numCellsY; i++){
+	// 	for(int j = 0; j<info->numCellsX; j++){
+	// 		float uc = (u[i*nColsU + j] + u[i*nColsU + j + 1])/2;
+	// 		float vc = (v[(i + 1)*nColsV + j] + v[i*nColsV + j])/2;
+	// 		fprintf(MAP,"%f,%f,%f,%d,%d\n", Pressure[i*nColsP + j], uc, vc, j, i);
+	// 	}
+	// }
 
-	fclose(MAP);
+	// fclose(MAP);
 
 	return 0;
 
