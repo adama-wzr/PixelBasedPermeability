@@ -33,6 +33,7 @@ typedef struct
 	float ConvergenceRMS;
 	float DomainHeight;
 	float DomainWidth;
+	int nCores;
 }options;
 
 // Struct to hold constants, variables, and results intrinsic to the simulation
@@ -102,6 +103,7 @@ int printOptions(options* opts){
 	printf("RMS Convergence = %.10f\n", opts->ConvergenceRMS);
 	printf("Name of input image: %s\n", opts->inputFilename);
 	printf("Name of output file: %s\n", opts->outputFilename);
+	printf("Number of Cores = %d\n", opts->nCores);
 	printf("--------------------------------------\n\n");
 
 	return 0;
@@ -182,6 +184,8 @@ int readInputFile(char* FileName, options* opts){
 	 	}else if(strcmp(tempC, "RelaxFactor:") == 0){
 	 		opts->alphaRelax = tempD;
 
+	 	}else if(strcmp(tempC, "nCores:") == 0){
+	 		opts->nCores = (int)tempD;
 	 	}
 	}
 	

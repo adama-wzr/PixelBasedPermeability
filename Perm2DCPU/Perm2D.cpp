@@ -16,6 +16,10 @@ int main(void){
 
 	readInputFile(inputFilename, &opts);
 
+	// Select proper number of cores
+
+	omp_set_num_threads(opts.nCores);
+
 	// Read 2D Input Image
 
 	int width, height, channel;

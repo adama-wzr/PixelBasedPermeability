@@ -10,8 +10,9 @@ PR: 99
 RelaxFactor: 0.1
 OutputName: Circles00010_sim.csv
 printMaps: 1
-MaxIterGlobal: 4
+MaxIterGlobal: 50
 ResidualConv: 0.00001
 MaxIterSolver: 100000
 SolverConv: 0.000001
+nCores: 6
 Verbose: 1
