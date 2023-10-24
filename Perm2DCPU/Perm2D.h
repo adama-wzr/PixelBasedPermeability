@@ -94,7 +94,7 @@ int printOptions(options* opts){
 	printf("Pressure Left = %.2f Pa\n", opts->PL);
 	printf("Pressure Right = %.2f Pa\n", opts->PR);
 	printf("Density = %.2f kg/m^3\n", opts->density);
-	printf("Kinematic Viscosity = %.6f m^2/s\n", opts->viscosity);
+	printf("Dinamic Viscosity = %.6f kg/(m*s) or Pa*s\n", opts->viscosity);
 	printf("Mesh Refinement = %d\n", opts->MeshAmp);
 	printf("Relaxation Factor = %f\n", opts->alphaRelax);
 	printf("Maximum Iterations Solver = %ld\n", opts->MaxIterSolver);
@@ -353,7 +353,7 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 
 	for(int row = 0; row<info->numCellsY; row++){
 		for(int col = 0; col<info->numCellsX; col++){
-			R += density*Area*fabs(U[row*nColsU + col] - U[row*nColsU + col + 1]) + fabs(V[(row + 1)*nColsV + col] - V[row*nColsV + col]);
+			R += density*Area*(fabs(U[row*nColsU + col] - U[row*nColsU + col + 1]) + fabs(V[(row + 1)*nColsV + col] - V[row*nColsV + col]));
 		}
 	}
 
@@ -510,7 +510,7 @@ int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulation
 			{
 				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));
 			}
-			printf("RMS = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
+			printf("Normalized Absolute Change = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
 		}
 
 		convergence_criteria = norm_diff;
