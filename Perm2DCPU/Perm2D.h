@@ -351,12 +351,21 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 
 	float R = 0; 	// variable used to store the residual
 
+	float max = 0;
+
+	float cellCont = 0;
+
 	for(int row = 0; row<info->numCellsY; row++){
 		for(int col = 0; col<info->numCellsX; col++){
-			R += density*Area*(fabs(U[row*nColsU + col] - U[row*nColsU + col + 1]) + fabs(V[(row + 1)*nColsV + col] - V[row*nColsV + col]));
+			cellCont = density*Area*(fabs(U[row*nColsU + col] - U[row*nColsU + col + 1]) + fabs(V[(row + 1)*nColsV + col] - V[row*nColsV + col]));
+			R += cellCont;
+			if(cellCont > max){
+				max = cellCont;
+			}
 		}
 	}
 
+	printf("Max Cell Continuity = %f\n", max);
 	// R = R/(info->numCellsY*info->numCellsX);
 
 	return R;
@@ -397,7 +406,7 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 	float Qavg = (QL + QR)/2;
 
 	// info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR));
-	info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx);
+	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx);
 	return 0;
 }
 

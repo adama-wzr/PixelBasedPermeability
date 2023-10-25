@@ -121,8 +121,14 @@ int main(void){
 
 	// Now we use the SUV-CUT algorithm to solve velocity-pressure coupled
 
-	float RMS = 1;
+	float RMS = 1.0;
 	long int iter = 0;
+
+	FILE *OUT;
+
+	OUT = fopen("test.csv", "w");
+
+	fprintf(OUT, "iter,K,R,alpha,mesh\n");
 
 	while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS){
 
@@ -157,8 +163,12 @@ int main(void){
 
 		PermCalc(U, &opts, &simInfo);
 
+		fprintf(OUT, "%ld,%f,%f,%f,%d\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp);
+
 		iter++;
 	}
+
+	fclose(OUT);
 
 	if(opts.printMaps == 1){
 		printPUVmaps(Pressure, U, V, &opts, &simInfo);
