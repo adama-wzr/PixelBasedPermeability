@@ -17,7 +17,7 @@ fig1.set_size_inches(6, 3)
 
 ax1.plot(raw_data[:, 0], raw_data[:,1], 'b*')
 ax1.set_xlabel('Iterations', fontsize=14)
-ax1.set_ylabel(r'k^{\*}[/]', fontsize=14)
+ax1.set_ylabel(r'k$^{*}[/]$', fontsize=14)
 
 ax2.plot(raw_data[:, 0], raw_data[:,2], 'k--')
 ax2.set_xlabel('Iterations', fontsize=14)
