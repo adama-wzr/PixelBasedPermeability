@@ -159,7 +159,7 @@ int main(void){
 
 		PermCalc(U, &opts, &simInfo);
 
-		fprintf(OUT, "%ld,%f,%f,%f,%d\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp);
+		fprintf(OUT, "%ld,%1.9f,%1.9f,%f,%d\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp);
 
 		iter++;
 	}
