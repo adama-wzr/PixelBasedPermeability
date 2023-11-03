@@ -42,8 +42,8 @@ int main(void){
 	simInfo.numCellsX = width*opts.MeshAmp;			// Simulation Grid width in number of cells
 	simInfo.numCellsY = height*opts.MeshAmp;		// Simulation Grid height in number of cells
 	simInfo.nElements = simInfo.numCellsY*simInfo.numCellsX;	// Number of elements (total)
-	simInfo.dx = simInfo.numCellsX/opts.DomainWidth;			// dx
-	simInfo.dy = simInfo.numCellsY/opts.DomainHeight;			// dy
+	simInfo.dx = opts.DomainWidth/simInfo.numCellsX;			// dx
+	simInfo.dy = opts.DomainWidth/simInfo.numCellsY;			// dy
 
 	unsigned int *Grid = (unsigned int*)malloc(sizeof(int)*simInfo.numCellsX*simInfo.numCellsY);		// Array that will hold binary domain (solid vs fluid)
 
@@ -94,21 +94,37 @@ int main(void){
 
 	// Initialize arrays
 
-	memset(Pressure, (opts.PL + opts.PR)/2, sizeof(Pressure));		// Initialized to avg. between PL and PR
+	memset(Pressure, 0, sizeof(Pressure));		// Initialized to avg. between PL and PR
 
-	memset(uExp, 0, sizeof(uExp));									// Initialized to 0 because we will solve for it first step
 	memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
 
 	memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
 	memset(vCoeff, 0, sizeof(vCoeff));								// Initialized to 0 because we solve for it first step
 
 	memset(V, 0, sizeof(V));										// Initialize to 0 because it is the dominant flow
-	memset(U, 0.001, sizeof(U));									// Initialized to 0.001 just to help convergence
+
+	for(int row = 0; row<simInfo.numCellsY; row++){
+		for(int col = 0; col< simInfo.numCellsX+1; col++){
+			int index = row*(simInfo.numCellsX + 1) + col;
+			if(col < simInfo.numCellsX){
+				// Pressure[row*(simInfo.numCellsX) + col] = (opts.PL + opts.PR)/2;
+				Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(opts.PL - opts.PR) + opts.PR;
+			}
+			U[index] = 0.01;
+			uExp[index] = 0.01;
+		}	
+	}
 
 	// Now we use the SUV-CUT algorithm to solve velocity-pressure coupled
 
-	float RMS = 1;
+	float RMS = 1.0;
 	long int iter = 0;
+
+	FILE *OUT;
+
+	OUT = fopen("test.csv", "w");
+
+	fprintf(OUT, "iter,K,R,alpha,mesh\n");
 
 	while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS){
 
@@ -118,13 +134,52 @@ int main(void){
 			- Use explicit u and v to solve for pressure implicitly
 			- Use pressure solutions to correct u and v explicitly
 
+			- (optional) solve equations of state to update physical properties
+
 			Repeat until converged.
 
 		*/
 
+		if(iter == 0){
+			printf("Global Iter: %ld\n\n", iter+1);
+		}else{
+			printf("Global Iter: %ld\n", iter+1);
+			printf("Permeability: %f\n", simInfo.Perm);
+			printf("Continuity RMS: %f\n\n", RMS);
+		}
+		
+
 		explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
 
+		implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &opts, &simInfo);
+
+		momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &opts, &simInfo);
+
+		RMS = ResidualContinuity(U, V, &opts, &simInfo);
+
+		PermCalc(U, &opts, &simInfo);
+
+		fprintf(OUT, "%ld,%f,%f,%f,%d\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp);
+
+		iter++;
 	}
+
+	fclose(OUT);
+
+	if(opts.printMaps == 1){
+		printPUVmaps(Pressure, U, V, &opts, &simInfo);
+	}
+	
+	// Housekeeping
+
+	free(Pressure);
+	free(U);
+	free(V);
+	free(uCoeff);
+	free(vCoeff);
+	free(uExp);
+	free(vExp);
+	free(Grid);
 
 	return 0;
 }

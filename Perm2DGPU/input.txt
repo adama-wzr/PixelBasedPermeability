@@ -2,16 +2,17 @@ Input File:
 DomainHeight: 0.1
 DomainWidth: 0.1
 Dens: 1000
-Visc: 1e-6
-MeshAmp: 1
+Visc: 1e-3
+MeshAmp: 2
 InputName: 00000.jpg
 PL: 100
 PR: 99
-RelaxFactor = 0.6
-OutputName: test.csv
+RelaxFactor: 0.1
+OutputName: testGPU.csv
 printMaps: 1
-MaxIterGlobal: 500000
-ResidualConv: 0.00001
-MaxIterSolver: 500000
-SolverConv: 0.00001
+MaxIterGlobal: 50
+ResidualConv: 0.000001
+MaxIterSolver: 100000
+SolverConv: 0.000001
+nCores: 6
 Verbose: 1
