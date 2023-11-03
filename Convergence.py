@@ -12,7 +12,7 @@ raw_data = df1[["iter", "K", "R", "alpha", "mesh"]].to_numpy()
 
 # Get final permeability
 
-perm = f"Perm={raw_data[-1,1]:07f}"
+perm = f"Perm={raw_data[-1,1]:09f}"
 
 fig1, (ax1, ax2) = plt.subplots(1, 2, tight_layout=True)
 
