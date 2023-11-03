@@ -568,7 +568,7 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 	float Qavg = (QL + QR)/2;
 
 	// info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR));
-	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*o->DomainWidth);
+	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx);
 	return 0;
 }
 

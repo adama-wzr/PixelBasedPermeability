@@ -122,7 +122,7 @@ int main(void){
 
 	FILE *OUT;
 
-	OUT = fopen("test.csv", "w");
+	OUT = fopen("ConvergenceData.csv", "w");
 
 	fprintf(OUT, "iter,K,R,alpha,mesh\n");
 

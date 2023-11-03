@@ -10,9 +10,9 @@ PR: 99
 RelaxFactor: 0.1
 OutputName: testGPU.csv
 printMaps: 1
-MaxIterGlobal: 50
+MaxIterGlobal: 100
 ResidualConv: 0.000001
-MaxIterSolver: 100000
+MaxIterSolver: 1000000
 SolverConv: 0.000001
 nCores: 6
 Verbose: 1
