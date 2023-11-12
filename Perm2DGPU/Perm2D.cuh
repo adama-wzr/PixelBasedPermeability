@@ -875,7 +875,12 @@ int aStarMain(unsigned int* GRID, domainInfo info){
 	// Declare 2D array of structure type "node"
 	// Node contains information such as parent coordinates, g, h, and f
 
-	node nodeInfo[info.ySize][info.ySize];
+	node **nodeInfo;
+	nodeInfo = (node **)malloc(sizeof(node *)*info.ySize);
+
+	for(int i = 0; i<info.ySize; i++){
+		nodeInfo[i] = (node *)malloc(sizeof(node)*info.ySize);
+	}
 
 	// Initialize all paremeters
 
