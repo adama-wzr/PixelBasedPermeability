@@ -357,7 +357,7 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 
 	for(int row = 0; row<info->numCellsY; row++){
 		for(int col = 0; col<info->numCellsX; col++){
-			cellCont = density*Area*(fabs(U[row*nColsU + col] - U[row*nColsU + col + 1]) + fabs(V[(row + 1)*nColsV + col] - V[row*nColsV + col]));
+			cellCont = density*Area*(fabs(U[row*nColsU + col] - U[row*nColsU + col + 1] + V[(row + 1)*nColsV + col] - V[row*nColsV + col]));
 			R += cellCont;
 			if(cellCont > max){
 				max = cellCont;
@@ -368,7 +368,7 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 	printf("Max Cell Continuity = %f\n", max);
 	// R = R/(info->numCellsY*info->numCellsX);
 
-	return R;
+	return max/Area;
 }
 
 
@@ -406,7 +406,7 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 	float Qavg = (QL + QR)/2;
 
 	// info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR));
-	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx);
+	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx)*1000;
 	return 0;
 }
 
@@ -557,7 +557,12 @@ int aStarMain(unsigned int* GRID, domainInfo info){
 	// Declare 2D array of structure type "node"
 	// Node contains information such as parent coordinates, g, h, and f
 
-	node nodeInfo[info.ySize][info.ySize];
+	node **nodeInfo;
+	nodeInfo = (node **)malloc(sizeof(node *)*info.ySize);
+
+	for(int i = 0; i<info.ySize; i++){
+		nodeInfo[i] = (node *)malloc(sizeof(node)*info.ySize);
+	}
 
 	// Initialize all paremeters
 
