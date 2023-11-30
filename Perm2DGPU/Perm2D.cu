@@ -145,7 +145,7 @@ int main(void){
 		}else{
 			printf("Global Iter: %ld\n", iter+1);
 			printf("Permeability: %f\n", simInfo.Perm);
-			printf("Continuity RMS: %f\n\n", RMS);
+			printf("Continuity RMS: %1.9f\n\n", RMS);
 		}
 		
 
@@ -165,6 +165,8 @@ int main(void){
 	}
 
 	fclose(OUT);
+
+	ResMap(U, V, &opts, &simInfo);
 
 	if(opts.printMaps == 1){
 		printPUVmaps(Pressure, U, V, &opts, &simInfo);

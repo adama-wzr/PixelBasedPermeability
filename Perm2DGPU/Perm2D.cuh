@@ -473,6 +473,74 @@ int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo
 }
 
 
+float ResMap(float *U, float *V, options *o, simulationInfo *info){
+	/*
+		Funcion ResMap:
+
+		Inputs:
+			- float *U: pointer to array with x component of velocities
+			- float *V: pointer to array with v components of velocities
+			- options *o: pointer to array with user-entered options
+			- simulationInfo *info: pointer to array with simulation domain information
+
+		Outputs:
+			- Residual
+
+		Function will calculate residual convergence in the continuity equation, and each iterative step is normalized by 
+		the absolute value of the RHS summed over all cells for that iterative step.
+	*/
+
+	// Domain variables
+
+	float dx, dy;
+	dx = info->dx;
+	dy = info->dy;
+	float Area = dx*dy;
+
+	// Useful indexing variables
+
+	int nColsU = info->numCellsX + 1;
+	int nColsV = info->numCellsY;
+
+	int nRowsV = info->numCellsY+1;
+	int nRowsU = info->numCellsY;
+
+	// Properties
+
+	float density = o->density;
+
+	// Iterate through the entire domain
+
+	float R = 0; 	// variable used to store the residual
+
+	float max = 0;
+
+	float cellCont = 0;
+
+	FILE *MAP;
+	MAP = fopen("ResMap.csv", "w");
+
+	fprintf(MAP, "R,x,y\n");
+
+	for(int row = 0; row<info->numCellsY; row++){
+		for(int col = 0; col<info->numCellsX; col++){
+			cellCont = density*Area*(fabs(U[row*nColsU + col] - U[row*nColsU + col + 1] + V[(row + 1)*nColsV + col] - V[row*nColsV + col]));
+			fprintf(MAP, "%1.12f,%d,%d\n", cellCont, col, row);
+			R += cellCont;
+			if(cellCont > max){
+				max = cellCont;
+			}
+		}
+	}
+
+	printf("Max Cell Continuity = %1.9f\n", max);
+	fclose(MAP);
+	// R = R/(info->numCellsY*info->numCellsX);
+
+	return max;
+}
+
+
 float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 	/*
 		Funcion ResidualContinuity:
@@ -527,10 +595,10 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 		}
 	}
 
-	printf("Max Cell Continuity = %f\n", max);
+	printf("Max Cell Continuity = %1.9f\n", max);
 	// R = R/(info->numCellsY*info->numCellsX);
 
-	return max/Area;
+	return max;
 }
 
 
@@ -800,35 +868,41 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 
 		cudaDeviceSynchronize();
 
-		// update temporary x-vector with new values
+		// update temporary x-vector with new values on the device
 
 		d_temp_x_vec = d_x_vec;
 
-		// cudaStatus = cudaMemcpy(d_temp_x_vec, d_x_vec, sizeof(d_x_vec), cudaMemcpyDeviceToDevice);
+		// cudaStatus = cudaMemcpy(d_temp_x_vec, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyHostToHost);
 		// if (cudaStatus != cudaSuccess) {
 		// 	fprintf(stderr, "d_temp_x_vec cudaMemcpy failed!");
 		// 	str = cudaGetErrorString(cudaStatus);
 		// 	fprintf(stderr, "CUDA Error!:: %s\n", str);
 		// }
 
+		// update the x_vec on host
+
+		cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToHost);
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "Pressure cudaMemcpy failed!");
+			str = cudaGetErrorString(cudaStatus);
+			fprintf(stderr, "CUDA Error!:: %s\n", str);
+		}
+
 		if(iterationCount % 10000 == 0)
 		{	
-			cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToHost);
-			if (cudaStatus != cudaSuccess) {
-				fprintf(stderr, "Pressure cudaMemcpy failed!");
-				str = cudaGetErrorString(cudaStatus);
-				fprintf(stderr, "CUDA Error!:: %s\n", str);
-			}
 			norm_diff = 0;
 			for(index = 0; index < nCols*nRows; index++)
 			{
 				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));
 			}
 			printf("Normalized Absolute Change = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
-			for(int i = 0; i<nCols*nRows; i++){
-				tempP[i] = Pressure[i];
-			}
 		}
+
+		for(int i = 0; i<nCols*nRows; i++){
+			tempP[i] = Pressure[i];
+		}
+		// tempP = Pressure;
+		// memcpy(tempP, Pressure, sizeof(Pressure));
 
 		convergence_criteria = norm_diff;
 		
