@@ -80,6 +80,10 @@ int main(void){
 		std::cout << "Valid path found.\nProceeding to permeability CFD simulation." << std::endl;
 	}
 
+	// Flood Fill to eliminate non-participating media
+
+	FloodFill(Grid, &simInfo);
+
 	// Define arrays essential for the solution
 
 	float *Pressure = (float *)malloc(sizeof(float)*simInfo.nElements);					// store pressure
@@ -166,7 +170,7 @@ int main(void){
 
 	fclose(OUT);
 
-	ResMap(U, V, &opts, &simInfo);
+	// ResMap(U, V, &opts, &simInfo);
 
 	if(opts.printMaps == 1){
 		printPUVmaps(Pressure, U, V, &opts, &simInfo);

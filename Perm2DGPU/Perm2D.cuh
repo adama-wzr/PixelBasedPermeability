@@ -929,6 +929,162 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 }
 
 
+int FloodFill(unsigned int* Grid, simulationInfo* simInfo)
+{
+	/*
+		Flood Fill algorithm:
+
+		Inputs:
+			- pointer to Grid: array containing the location of solids and fluids
+			- simulationInfo* simInfo: pointer to struct containing the simInfo
+
+		Outputs:
+			- None
+
+		Function will modify the Grid array. If fluid is not participating, it will
+		be assigned a flag of 2.
+	*/
+
+	int* Domain = (int *)malloc(sizeof(int)*simInfo->nElements);
+	int index;
+
+	// Step 1: Initialize all solids in the domain
+
+	for(int row = 0; row<simInfo->numCellsY; row++){
+		for(int col = 0; col<simInfo->numCellsX; col++){
+			index = row*simInfo->numCellsX + col;
+			if(Grid[index] == 1){
+				Domain[index] = 1;
+			} else{
+				Domain[index] = -1;
+			}
+		}
+	}
+
+	// Step 2: Find fluid in the two boundaries (left and right), set flag to 0, add to open list
+
+	std::set<coordPair> cList;
+
+	for(int row = 0; row<simInfo->numCellsY; row++){
+		int indexL = row*simInfo->numCellsX;
+		int indexR = row*simInfo->numCellsX + simInfo->numCellsX - 1;
+
+		if(Domain[indexL] == -1){
+			Domain[indexL] = 0;
+			cList.insert(std::make_pair(row, 0));
+		}
+
+		if (Domain[indexR] == -1){
+			Domain[indexR] = 0;
+			cList.insert(std::make_pair(row, simInfo->numCellsX-1));
+		}
+	}
+
+	while(!cList.empty())
+	{
+		// Pop first item in the list
+		coordPair pop = *cList.begin();
+
+		// remove from open list
+		cList.erase(cList.begin());
+
+		// Get coordinates from popped item
+		int row = pop.first; // first argument of the second pair
+		int col = pop.second; // second argument of second pair
+
+		/*
+			Now we need to check North, South, East, and West for more fluid:
+				North: row - 1, col
+				South: row + 1, col
+				West: row, col - 1
+				East: row, col + 1
+			Details:
+				- No diagonals are checked.
+				- Periodic BC North and South
+
+		*/
+
+		int tempRow, tempCol;
+
+		// North
+		tempCol = col;
+
+		// check periodic boundary
+		if(row == 0){
+			tempRow = simInfo->numCellsY - 1;
+		} else{
+			tempRow = row - 1;
+		}
+
+		// Update list if necessary
+
+		if(Domain[tempRow*simInfo->numCellsX + tempCol] == -1){
+			Domain[tempRow*simInfo->numCellsX + tempCol] = 0;
+			cList.insert(std::make_pair(tempRow, tempCol));
+		}
+
+		// South
+
+		tempCol = col;
+
+		// check periodic boundary
+
+		if(row == simInfo->numCellsY - 1){
+			tempRow = 0;
+		} else{
+			tempRow = row + 1;
+		}
+
+		// Update list if necessary
+
+		if(Domain[tempRow*simInfo->numCellsX + tempCol] == -1){
+			Domain[tempRow*simInfo->numCellsX + tempCol] = 0;
+			cList.insert(std::make_pair(tempRow, tempCol));
+		}
+
+		// West
+
+		if(col != 0){
+			tempCol = col - 1;
+			tempRow = row;
+
+			if(Domain[tempRow*simInfo->numCellsX + tempCol] == -1){
+				Domain[tempRow*simInfo->numCellsX + tempCol] = 0;
+				cList.insert(std::make_pair(tempRow, tempCol));
+			}
+		}
+
+		// East
+
+		if(col != simInfo->numCellsX - 1){
+			tempCol = col + 1;
+			tempRow = row;
+
+			if(Domain[tempRow*simInfo->numCellsX + tempCol] == -1){
+				Domain[tempRow*simInfo->numCellsX + tempCol] = 0;
+				cList.insert(std::make_pair(tempRow, tempCol));
+			}
+		}
+		// repeat everything if list is still not empty
+	}
+
+	// Every flag that is still -1 means its non-participating fluid
+
+	for(int row = 0; row<simInfo->numCellsY; row++){
+		for(int col = 0; col<simInfo->numCellsX; col++){
+			index = row*simInfo->numCellsX + col;
+			if(Domain[index] == -1){
+				Grid[index] = 2;
+			}
+		}
+	}
+
+	free(Domain);
+
+	return 0;
+}
+
+
 int aStarMain(unsigned int* GRID, domainInfo info){
 	/*
 		aStarMain Function
@@ -1529,6 +1685,14 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 				A[index*5 + 3] = 0;
 				A[index*5 + 4] = 0;
 				RHS[index] = 0;
+			} else if(Grid[index] == 2)
+			{
+				A[index*5 + 0] = 1;
+				A[index*5 + 1] = 0;
+				A[index*5 + 2] = 0;
+				A[index*5 + 3] = 0;
+				A[index*5 + 4] = 0;
+				RHS[index] = o->PR;
 			}else
 			{ 
 				// If central point is not solid, then we proceed normally
@@ -1793,7 +1957,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 
 			if(uCol == 0)
 			{
-				if(Grid[uRow*nColsP + uCol] == 1)
+				if(Grid[uRow*nColsP + uCol] == 1 || Grid[uRow*nColsP + uCol] == 2)
 				{
 					u[uRow*nColsU + uCol] = 0;
 				} else
@@ -1802,7 +1966,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 				}
 			}else if(uCol == info->numCellsX)
 			{
-				if(Grid[uRow*nColsP + uCol - 1] == 1)
+				if(Grid[uRow*nColsP + uCol - 1] == 1 || Grid[uRow*nColsP + uCol - 1] == 2)
 				{
 					u[uRow*nColsU + uCol] = 0;
 				}else
@@ -1811,7 +1975,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 				}
 			} else
 			{
-				if(Grid[uRow*nColsP + uCol] == 1 || Grid[uRow*nColsP + uCol - 1] == 1)
+				if(Grid[uRow*nColsP + uCol] == 1 || Grid[uRow*nColsP + uCol - 1] == 1 || Grid[uRow*nColsP + uCol] == 2 || Grid[uRow*nColsP + uCol - 1] == 2)
 				{
 					u[uRow*nColsU + uCol] = 0;
 				}else
@@ -1824,7 +1988,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 
 			if(vRow == 0)
 			{
-				if(Grid[vRow*nColsV + vCol] == 1 || Grid[(nRowsP - 1)*nColsV + vCol] == 1)
+				if(Grid[vRow*nColsV + vCol] == 1 || Grid[(nRowsP - 1)*nColsV + vCol] == 1 || Grid[vRow*nColsV + vCol] == 2 || Grid[(nRowsP - 1)*nColsV + vCol] == 2)
 				{
 					v[vRow*nColsV + vCol] = 0;
 				} else
@@ -1833,7 +1997,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 				}
 			} else if(vRow == nRowsV - 1)
 			{
-				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[vCol] == 1)
+				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[vCol] == 1 || Grid[(vRow - 1)*nColsV + vCol] == 2 || Grid[vCol] == 2)
 				{
 					v[vRow*nColsV + vCol] = 0;
 				} else
@@ -1842,7 +2006,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 				}
 			} else
 			{
-				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[(vRow)*nColsV + vCol] == 1)
+				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[(vRow)*nColsV + vCol] == 1 || Grid[(vRow - 1)*nColsV + vCol] == 2 || Grid[(vRow)*nColsV + vCol] == 2)
 				{
 					v[vRow*nColsV + vCol] = 0;
 				}else
