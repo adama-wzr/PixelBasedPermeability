@@ -473,74 +473,6 @@ int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo
 }
 
 
-float ResMap(float *U, float *V, options *o, simulationInfo *info){
-	/*
-		Funcion ResMap:
-
-		Inputs:
-			- float *U: pointer to array with x component of velocities
-			- float *V: pointer to array with v components of velocities
-			- options *o: pointer to array with user-entered options
-			- simulationInfo *info: pointer to array with simulation domain information
-
-		Outputs:
-			- Residual
-
-		Function will calculate residual convergence in the continuity equation, and each iterative step is normalized by 
-		the absolute value of the RHS summed over all cells for that iterative step.
-	*/
-
-	// Domain variables
-
-	float dx, dy;
-	dx = info->dx;
-	dy = info->dy;
-	float Area = dx*dy;
-
-	// Useful indexing variables
-
-	int nColsU = info->numCellsX + 1;
-	int nColsV = info->numCellsY;
-
-	int nRowsV = info->numCellsY+1;
-	int nRowsU = info->numCellsY;
-
-	// Properties
-
-	float density = o->density;
-
-	// Iterate through the entire domain
-
-	float R = 0; 	// variable used to store the residual
-
-	float max = 0;
-
-	float cellCont = 0;
-
-	FILE *MAP;
-	MAP = fopen("ResMap.csv", "w");
-
-	fprintf(MAP, "R,x,y\n");
-
-	for(int row = 0; row<info->numCellsY; row++){
-		for(int col = 0; col<info->numCellsX; col++){
-			cellCont = density*Area*(fabs(U[row*nColsU + col] - U[row*nColsU + col + 1] + V[(row + 1)*nColsV + col] - V[row*nColsV + col]));
-			fprintf(MAP, "%1.12f,%d,%d\n", cellCont, col, row);
-			R += cellCont;
-			if(cellCont > max){
-				max = cellCont;
-			}
-		}
-	}
-
-	printf("Max Cell Continuity = %1.9f\n", max);
-	fclose(MAP);
-	// R = R/(info->numCellsY*info->numCellsX);
-
-	return max;
-}
-
-
 float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 	/*
 		Funcion ResidualContinuity:
@@ -595,10 +527,79 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 		}
 	}
 
-	printf("Max Cell Continuity = %1.9f\n", max);
+	printf("Max Cell Continuity = %f\n", max);
 	// R = R/(info->numCellsY*info->numCellsX);
 
-	return max;
+	return max/Area;
+}
+
+
+float ResPrint(float *U, float *V, options *o, simulationInfo *info){
+	/*
+		Funcion ResidualContinuity:
+
+		Inputs:
+			- float *U: pointer to array with x component of velocities
+			- float *V: pointer to array with v components of velocities
+			- options *o: pointer to array with user-entered options
+			- simulationInfo *info: pointer to array with simulation domain information
+
+		Outputs:
+			- Residual
+
+		Function will calculate residual convergence in the continuity equation, and each iterative step is normalized by 
+		the absolute value of the RHS summed over all cells for that iterative step.
+	*/
+
+	FILE *MAP;	
+	MAP = fopen("Residual.csv", "w");
+
+	fprintf(MAP, "x,y,R\n");
+
+	// Domain variables
+
+	float dx, dy;
+	dx = info->dx;
+	dy = info->dy;
+	float Area = dx*dy;
+
+	// Useful indexing variables
+
+	int nColsU = info->numCellsX + 1;
+	int nColsV = info->numCellsY;
+
+	int nRowsV = info->numCellsY+1;
+	int nRowsU = info->numCellsY;
+
+	// Properties
+
+	float density = o->density;
+
+	// Iterate through the entire domain
+
+	float R = 0; 	// variable used to store the residual
+
+	float max = 0;
+
+	float cellCont = 0;
+
+	for(int row = 0; row<info->numCellsY; row++){
+		for(int col = 0; col<info->numCellsX; col++){
+			cellCont = density*Area*(fabs(U[row*nColsU + col] - U[row*nColsU + col + 1] + V[(row + 1)*nColsV + col] - V[row*nColsV + col]));
+			fprintf(MAP,"%d,%d,%f\n", col, row, cellCont);
+			R += cellCont;
+			if(cellCont > max){
+				max = cellCont;
+			}
+		}
+	}
+
+	printf("Max Cell Continuity = %f\n", max);
+	// R = R/(info->numCellsY*info->numCellsX);
+
+	fclose(MAP);
+
+	return max/Area;
 }
 
 
@@ -868,18 +869,16 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 
 		cudaDeviceSynchronize();
 
-		// update temporary x-vector with new values on the device
+		// update temporary x-vector with new values
 
 		d_temp_x_vec = d_x_vec;
 
-		// cudaStatus = cudaMemcpy(d_temp_x_vec, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyHostToHost);
+		// cudaStatus = cudaMemcpy(d_temp_x_vec, d_x_vec, sizeof(d_x_vec), cudaMemcpyDeviceToDevice);
 		// if (cudaStatus != cudaSuccess) {
 		// 	fprintf(stderr, "d_temp_x_vec cudaMemcpy failed!");
 		// 	str = cudaGetErrorString(cudaStatus);
 		// 	fprintf(stderr, "CUDA Error!:: %s\n", str);
 		// }
-
-		// update the x_vec on host
 
 		cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToHost);
 		if (cudaStatus != cudaSuccess) {
@@ -889,7 +888,7 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 		}
 
 		if(iterationCount % 10000 == 0)
-		{	
+		{
 			norm_diff = 0;
 			for(index = 0; index < nCols*nRows; index++)
 			{
@@ -898,11 +897,10 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 			printf("Normalized Absolute Change = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
 		}
 
+
 		for(int i = 0; i<nCols*nRows; i++){
 			tempP[i] = Pressure[i];
 		}
-		// tempP = Pressure;
-		// memcpy(tempP, Pressure, sizeof(Pressure));
 
 		convergence_criteria = norm_diff;
 		
@@ -1172,6 +1170,162 @@ int aStarMain(unsigned int* GRID, domainInfo info){
 		printf("Failed to find a path.\n");
 	}
 	return foundDest;
+}
+
+
+int FloodFill(unsigned int* Grid, simulationInfo* simInfo)
+{
+	/*
+		Flood Fill algorithm:
+
+		Inputs:
+			- pointer to Grid: array containing the location of solids and fluids
+			- simulationInfo* simInfo: pointer to struct containing the simInfo
+
+		Outputs:
+			- None
+
+		Function will modify the Grid array. If fluid is not participating, it will
+		be assigned a flag of 2.
+	*/
+
+	int* Domain = (int *)malloc(sizeof(int)*simInfo->nElements);
+	int index;
+
+	// Step 1: Initialize all solids in the domain
+
+	for(int row = 0; row<simInfo->numCellsY; row++){
+		for(int col = 0; col<simInfo->numCellsX; col++){
+			index = row*simInfo->numCellsX + col;
+			if(Grid[index] == 1){
+				Domain[index] = 1;
+			} else{
+				Domain[index] = -1;
+			}
+		}
+	}
+
+	// Step 2: Find fluid in the two boundaries (left and right), set flag to 0, add to open list
+
+	std::set<coordPair> cList;
+
+	for(int row = 0; row<simInfo->numCellsY; row++){
+		int indexL = row*simInfo->numCellsX;
+		int indexR = row*simInfo->numCellsX + simInfo->numCellsX - 1;
+
+		if(Domain[indexL] == -1){
+			Domain[indexL] = 0;
+			cList.insert(std::make_pair(row, 0));
+		}
+
+		if (Domain[indexR] == -1){
+			Domain[indexR] = 0;
+			cList.insert(std::make_pair(row, simInfo->numCellsX-1));
+		}
+	}
+
+	while(!cList.empty())
+	{
+		// Pop first item in the list
+		coordPair pop = *cList.begin();
+
+		// remove from open list
+		cList.erase(cList.begin());
+
+		// Get coordinates from popped item
+		int row = pop.first; // first argument of the second pair
+		int col = pop.second; // second argument of second pair
+
+		/*
+			Now we need to check North, South, East, and West for more fluid:
+				North: row - 1, col
+				South: row + 1, col
+				West: row, col - 1
+				East: row, col + 1
+			Details:
+				- No diagonals are checked.
+				- Periodic BC North and South
+
+		*/
+
+		int tempRow, tempCol;
+
+		// North
+		tempCol = col;
+
+		// check periodic boundary
+		if(row == 0){
+			tempRow = simInfo->numCellsY - 1;
+		} else{
+			tempRow = row - 1;
+		}
+
+		// Update list if necessary
+
+		if(Domain[tempRow*simInfo->numCellsX + tempCol] == -1){
+			Domain[tempRow*simInfo->numCellsX + tempCol] = 0;
+			cList.insert(std::make_pair(tempRow, tempCol));
+		}
+
+		// South
+
+		tempCol = col;
+
+		// check periodic boundary
+
+		if(row == simInfo->numCellsY - 1){
+			tempRow = 0;
+		} else{
+			tempRow = row + 1;
+		}
+
+		// Update list if necessary
+
+		if(Domain[tempRow*simInfo->numCellsX + tempCol] == -1){
+			Domain[tempRow*simInfo->numCellsX + tempCol] = 0;
+			cList.insert(std::make_pair(tempRow, tempCol));
+		}
+
+		// West
+
+		if(col != 0){
+			tempCol = col - 1;
+			tempRow = row;
+
+			if(Domain[tempRow*simInfo->numCellsX + tempCol] == -1){
+				Domain[tempRow*simInfo->numCellsX + tempCol] = 0;
+				cList.insert(std::make_pair(tempRow, tempCol));
+			}
+		}
+
+		// East
+
+		if(col != simInfo->numCellsX - 1){
+			tempCol = col + 1;
+			tempRow = row;
+
+			if(Domain[tempRow*simInfo->numCellsX + tempCol] == -1){
+				Domain[tempRow*simInfo->numCellsX + tempCol] = 0;
+				cList.insert(std::make_pair(tempRow, tempCol));
+			}
+		}
+		// repeat everything if list is still not empty
+	}
+
+	// Every flag that is still -1 means its non-participating fluid
+
+	for(int row = 0; row<simInfo->numCellsY; row++){
+		for(int col = 0; col<simInfo->numCellsX; col++){
+			index = row*simInfo->numCellsX + col;
+			if(Domain[index] == -1){
+				Grid[index] = 2;
+			}
+		}
+	}
+
+	free(Domain);
+
+	return 0;
 }
 
 
@@ -1529,6 +1683,14 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 				A[index*5 + 3] = 0;
 				A[index*5 + 4] = 0;
 				RHS[index] = 0;
+			}else if(Grid[index] == 2)
+			{
+				A[index*5 + 0] = 1;
+				A[index*5 + 1] = 0;
+				A[index*5 + 2] = 0;
+				A[index*5 + 3] = 0;
+				A[index*5 + 4] = 0;
+				RHS[index] = o->PR;
 			}else
 			{ 
 				// If central point is not solid, then we proceed normally
@@ -1793,7 +1955,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 
 			if(uCol == 0)
 			{
-				if(Grid[uRow*nColsP + uCol] == 1)
+				if(Grid[uRow*nColsP + uCol] == 1 || Grid[uRow*nColsP + uCol] == 2)
 				{
 					u[uRow*nColsU + uCol] = 0;
 				} else
@@ -1802,7 +1964,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 				}
 			}else if(uCol == info->numCellsX)
 			{
-				if(Grid[uRow*nColsP + uCol - 1] == 1)
+				if(Grid[uRow*nColsP + uCol - 1] == 1 || Grid[uRow*nColsP + uCol - 1] == 2)
 				{
 					u[uRow*nColsU + uCol] = 0;
 				}else
@@ -1811,7 +1973,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 				}
 			} else
 			{
-				if(Grid[uRow*nColsP + uCol] == 1 || Grid[uRow*nColsP + uCol - 1] == 1)
+				if(Grid[uRow*nColsP + uCol] == 1 || Grid[uRow*nColsP + uCol - 1] == 1 || Grid[uRow*nColsP + uCol] == 2 || Grid[uRow*nColsP + uCol - 1] == 2)
 				{
 					u[uRow*nColsU + uCol] = 0;
 				}else
@@ -1824,7 +1986,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 
 			if(vRow == 0)
 			{
-				if(Grid[vRow*nColsV + vCol] == 1 || Grid[(nRowsP - 1)*nColsV + vCol] == 1)
+				if(Grid[vRow*nColsV + vCol] == 1 || Grid[(nRowsP - 1)*nColsV + vCol] == 1 || Grid[vRow*nColsV + vCol] == 2 || Grid[(nRowsP - 1)*nColsV + vCol] == 2)
 				{
 					v[vRow*nColsV + vCol] = 0;
 				} else
@@ -1833,7 +1995,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 				}
 			} else if(vRow == nRowsV - 1)
 			{
-				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[vCol] == 1)
+				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[vCol] == 1 || Grid[(vRow - 1)*nColsV + vCol] == 2 || Grid[vCol] == 2)
 				{
 					v[vRow*nColsV + vCol] = 0;
 				} else
@@ -1842,7 +2004,7 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 				}
 			} else
 			{
-				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[(vRow)*nColsV + vCol] == 1)
+				if(Grid[(vRow - 1)*nColsV + vCol] == 1 || Grid[(vRow)*nColsV + vCol] == 1 || Grid[(vRow - 1)*nColsV + vCol] == 2 || Grid[(vRow)*nColsV + vCol] == 2)
 				{
 					v[vRow*nColsV + vCol] = 0;
 				}else
