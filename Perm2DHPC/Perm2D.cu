@@ -27,7 +27,7 @@ int main(void){
 
 		int threadIdx = omp_get_thread_num();
 
-		printf("Thread idx = %d\n", threadIdx);
+		printf("Thread idx = %d, img num = %d\n", threadIdx, myImg);
 
 		cudaSetDevice(threadIdx);
 

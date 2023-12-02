@@ -605,7 +605,7 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 		}
 	}
 
-	printf("Max Cell Continuity = %1.9f\n", max);
+	// printf("Max Cell Continuity = %1.9f\n", max);
 	// R = R/(info->numCellsY*info->numCellsX);
 
 	return max;
