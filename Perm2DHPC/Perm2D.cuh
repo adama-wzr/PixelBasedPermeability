@@ -433,6 +433,21 @@ float calcPorosity(unsigned char* imageAddress, int Width, int Height){
 }
 
 
+int printBatchOut(options *o, simulationInfo *info, int imgNumber, long int iter, float RMS){
+
+	FILE *OUT;
+	OUT = fopen(o->outputFilename, "a+");
+
+	// Info to print
+	// imgNumber, convergence, permeability, numIter
+	fprintf(OUT, "%d,%f,%f,%ld\n", imgNumber, RMS, info->Perm, iter);
+
+	fclose(OUT);
+
+	return 0;
+}
+
+
 int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo *info){
 	/*
 		printPUVmaps
@@ -1997,21 +2012,6 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 			}
 		}
 	}
-
-	// FILE *MAP;
-	// MAP = fopen("UV.csv", "w");
-
-	// fprintf(MAP, "P,U,V,x,y\n");
-
-	// for(int i = 0; i<info->numCellsY; i++){
-	// 	for(int j = 0; j<info->numCellsX; j++){
-	// 		float uc = (u[i*nColsU + j] + u[i*nColsU + j + 1])/2;
-	// 		float vc = (v[(i + 1)*nColsV + j] + v[i*nColsV + j])/2;
-	// 		fprintf(MAP,"%f,%f,%f,%d,%d\n", Pressure[i*nColsP + j], uc, vc, j, i);
-	// 	}
-	// }
-
-	// fclose(MAP);
 
 	return 0;
 
