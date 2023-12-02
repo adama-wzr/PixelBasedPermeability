@@ -118,16 +118,14 @@ int main(void){
 
 		// Initialize arrays
 
-		// memset(Pressure, 0, sizeof(Pressure));		// Initialized to avg. between PL and PR
+		memset(Pressure, 0, sizeof(Pressure));		// Initialized to avg. between PL and PR
 
-		// memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
+		memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
 
-		// memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
-		// memset(vCoeff, 0, sizeof(vCoeff));								// Initialized to 0 because we solve for it first step
+		memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
+		memset(vCoeff, 0, sizeof(vCoeff));								// Initialized to 0 because we solve for it first step
 
-		// memset(V, 0, sizeof(V));										// Initialize to 0 because it is the dominant flow
-
-		printf("numCellsX = %d, numCellsY = %d\n", simInfo.numCellsX, simInfo.numCellsY);
+		memset(V, 0, sizeof(V));										// Initialize to 0 because it is the dominant flow
 
 		for(int row = 0; row<simInfo.numCellsY; row++){
 			for(int col = 0; col< simInfo.numCellsX+1; col++){
@@ -138,10 +136,6 @@ int main(void){
 				}
 				U[index] = 0.01;
 				uExp[index] = 0.01;
-				vExp[index] = 0;
-				uCoeff[index] = 0;
-				vCoeff[index] = 0;
-				V[index] = 0;
 			}	
 		}
 
@@ -166,17 +160,14 @@ int main(void){
 
 			if(iter == 0){
 				printf("Global Iter: %ld\n\n", iter+1);
-			}else{
+			}else if(iter % 10 == 0){
 				printf("Global Iter: %ld\n", iter+1);
 				printf("Permeability: %f\n", simInfo.Perm);
 				printf("Continuity RMS: %1.9f\n\n", RMS);
 			}
 			
-			printf("Explict Momentum\n");
 			explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
-			printf("Implicit Pressure\n");
 			implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &opts, &simInfo);
-			printf("Explict Momentum Correction\n");
 			momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &opts, &simInfo);
 
 			RMS = ResidualContinuity(U, V, &opts, &simInfo);

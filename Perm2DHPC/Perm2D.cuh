@@ -401,10 +401,6 @@ void unInitializeGPU(float **d_x_vec, float **d_temp_x_vec, float **d_RHS, float
     }
 }
 
-
-
-
-
 float calcPorosity(unsigned char* imageAddress, int Width, int Height){
 	/*
 		calcPorosity
@@ -439,8 +435,8 @@ int printBatchOut(options *o, simulationInfo *info, int imgNumber, long int iter
 	OUT = fopen(o->outputFilename, "a+");
 
 	// Info to print
-	// imgNumber, convergence, permeability, numIter
-	fprintf(OUT, "%d,%f,%f,%ld\n", imgNumber, RMS, info->Perm, iter);
+	// imgNumber, convergence, permeability, numIter, porosity
+	fprintf(OUT, "%d,%f,%f,%ld,%f\n", imgNumber, RMS, info->Perm, iter, info->porosity);
 
 	fclose(OUT);
 
@@ -909,7 +905,6 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 			{
 				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));
 			}
-			printf("Normalized Absolute Change = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
 		}
 
 		for(int i = 0; i<nCols*nRows; i++){
@@ -928,8 +923,6 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 
 	float elapsedTime;
 	cudaEventElapsedTime(&elapsedTime, start, stop);
-
-	printf("Jacobi Convergence Time = %f\n", elapsedTime/1000);
 
 	cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float)*info->nElements, cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
