@@ -880,14 +880,14 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 
 		// update temporary x-vector with new values on the device
 
-		d_temp_x_vec = d_x_vec;
+		// d_temp_x_vec = d_x_vec;
 
-		// cudaStatus = cudaMemcpy(d_temp_x_vec, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyHostToHost);
-		// if (cudaStatus != cudaSuccess) {
-		// 	fprintf(stderr, "d_temp_x_vec cudaMemcpy failed!");
-		// 	str = cudaGetErrorString(cudaStatus);
-		// 	fprintf(stderr, "CUDA Error!:: %s\n", str);
-		// }
+		cudaStatus = cudaMemcpy(d_temp_x_vec, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToDevice);
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "d_temp_x_vec cudaMemcpy failed!");
+			str = cudaGetErrorString(cudaStatus);
+			fprintf(stderr, "CUDA Error!:: %s\n", str);
+		}
 
 		// update the x_vec on host
 
@@ -910,8 +910,6 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 		for(int i = 0; i<nCols*nRows; i++){
 			tempP[i] = Pressure[i];
 		}
-		// tempP = Pressure;
-		// memcpy(tempP, Pressure, sizeof(Pressure));
 
 		convergence_criteria = norm_diff;
 		
@@ -1597,13 +1595,7 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 				} else{
 					vExp[vRow*nColsV + vCol] += o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(asV*v[(0)*nColsV + vCol]);
 				}
-
-				// if(vCol == nColsV - 1){
-				// 	printf("vExp[row = %d, col = %d] = %f\n", vRow, vCol, vExp[vRow*nColsV + vCol]);
-				// 	printf("vCoeff[row = %d, col = %d] = %f\n", vRow, vCol, vCoeff[vRow*nColsV + vCol]);
-				// }
 			} // end of if statement
-
 		}
 	} // end of for loops
 
@@ -1874,7 +1866,6 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 	}
 
 	JacobiGPU2D(A, RHS, Pressure, o, info, d_x_vec, d_temp_x_vec, d_Coeff, d_RHS);
-
 	unInitializeGPU(&d_x_vec, &d_temp_x_vec, &d_RHS, &d_Coeff);
 
 	free(A);

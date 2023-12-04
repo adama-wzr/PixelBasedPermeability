@@ -21,8 +21,22 @@ int main(void){
 
 	omp_set_num_threads(numThreads);
 
-	#pragma omp parallel for schedule(auto)
+	// Start datastructures
+
+	options myOpts;
+
+	simulationInfo simInfo;
+
+	domainInfo info;
+
+	#pragma omp parallel for schedule(auto) private(myOpts, simInfo, info)
 	for(int myImg = 0; myImg<opts.nImg; myImg++){
+
+		// read options
+		readInputFile(inputFilename, &myOpts);
+
+		printf("Pressure Left = %f\n", myOpts.PL);
+		
 		// Get thread index
 
 		int threadIdx = omp_get_thread_num();
@@ -30,10 +44,6 @@ int main(void){
 		printf("Thread idx = %d, img num = %d\n", threadIdx, myImg);
 
 		cudaSetDevice(threadIdx);
-
-		// Initialize struct
-
-		simulationInfo simInfo;		// Struct to hold constants, variables, and results intrinsic to the simulation
 
 		// Read 2D Input Image
 
@@ -45,13 +55,15 @@ int main(void){
 
 		readImage(&targetImage, &width, &height, &channel, filename);
 
+		myOpts.inputFilename = filename;
+
 		if (channel != 1){
 			printf("Error: please enter a grascale image with 1 channel.\n Current number of channels = %d\n", channel);
 		}
 
 		simInfo.porosity = calcPorosity(targetImage, width, height);
 
-		if(opts.verbose == 1){
+		if(myOpts.verbose == 1){
 			std::cout << "Image Parameters:" << std::endl;
 			std::cout <<  "\n--------------------------------------" << std::endl;
 			std::cout << "Width (pixels) = " << width << " Height (pixels) = " << height << " Channel = " << channel << std::endl;
@@ -60,11 +72,11 @@ int main(void){
 
 		// Define mesh related parameters
 
-		simInfo.numCellsX = width*opts.MeshAmp;			// Simulation Grid width in number of cells
-		simInfo.numCellsY = height*opts.MeshAmp;		// Simulation Grid height in number of cells
+		simInfo.numCellsX = width*myOpts.MeshAmp;			// Simulation Grid width in number of cells
+		simInfo.numCellsY = height*myOpts.MeshAmp;		// Simulation Grid height in number of cells
 		simInfo.nElements = simInfo.numCellsY*simInfo.numCellsX;	// Number of elements (total)
-		simInfo.dx = opts.DomainWidth/simInfo.numCellsX;			// dx
-		simInfo.dy = opts.DomainWidth/simInfo.numCellsY;			// dy
+		simInfo.dx = myOpts.DomainWidth/simInfo.numCellsX;			// dx
+		simInfo.dy = myOpts.DomainWidth/simInfo.numCellsY;			// dy
 
 		unsigned int *Grid = (unsigned int*)malloc(sizeof(int)*simInfo.numCellsX*simInfo.numCellsY);		// Array that will hold binary domain (solid vs fluid)
 
@@ -72,8 +84,8 @@ int main(void){
 
 		for(int i = 0; i<simInfo.numCellsY; i++){
 			for (int j = 0; j<simInfo.numCellsX; j++){
-				int targetIndex_Row = i/opts.MeshAmp;
-				int targetIndex_Col = j/opts.MeshAmp;
+				int targetIndex_Row = i/myOpts.MeshAmp;
+				int targetIndex_Col = j/myOpts.MeshAmp;
 				if(targetImage[targetIndex_Row*width + targetIndex_Col] < 150){
 					Grid[i*simInfo.numCellsX + j] = 0; 			// black => fluid => 0 => void
 				} else{
@@ -87,7 +99,7 @@ int main(void){
 
 		bool pathFlag = false;
 
-		domainInfo info;
+		
 		info.xSize = simInfo.numCellsX;
 		info.ySize = simInfo.numCellsY;
 		info.verbose = 0;
@@ -96,7 +108,7 @@ int main(void){
 
 		if(pathFlag == false){
 			std::cout << "No valid path found, exiting now." << std::endl;
-		}else if(opts.verbose == 1){
+		}else if(myOpts.verbose == 1){
 			std::cout << "Valid path found.\nProceeding to permeability CFD simulation." << std::endl;
 		}
 
@@ -118,24 +130,28 @@ int main(void){
 
 		// Initialize arrays
 
-		memset(Pressure, 0, sizeof(Pressure));		// Initialized to avg. between PL and PR
+		// memset(Pressure, 0, sizeof(Pressure));		// Initialized to avg. between PL and PR
 
-		memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
+		// memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
 
-		memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
-		memset(vCoeff, 0, sizeof(vCoeff));								// Initialized to 0 because we solve for it first step
+		// memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
+		// memset(vCoeff, 0, sizeof(vCoeff));								// Initialized to 0 because we solve for it first step
 
-		memset(V, 0, sizeof(V));										// Initialize to 0 because it is the dominant flow
+		// memset(V, 0, sizeof(V));										// Initialize to 0 because it is the dominant flow
 
 		for(int row = 0; row<simInfo.numCellsY; row++){
 			for(int col = 0; col< simInfo.numCellsX+1; col++){
 				int index = row*(simInfo.numCellsX + 1) + col;
 				if(col < simInfo.numCellsX){
 					// Pressure[row*(simInfo.numCellsX) + col] = (opts.PL + opts.PR)/2;
-					Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(opts.PL - opts.PR) + opts.PR;
+					Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(myOpts.PL - myOpts.PR) + myOpts.PR;
 				}
 				U[index] = 0.01;
+				V[index] = 0;
 				uExp[index] = 0.01;
+				vExp[index] = 0;
+				uCoeff[index] = 0;
+				vCoeff[index] = 0;
 			}	
 		}
 
@@ -144,7 +160,8 @@ int main(void){
 		float RMS = 1.0;
 		long int iter = 0;
 
-		while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS){
+
+		while(iter < myOpts.MaxIterGlobal && RMS > myOpts.ConvergenceRMS){
 
 			/*
 				SUV-CUT procedure:
@@ -159,29 +176,28 @@ int main(void){
 			*/
 
 			if(iter == 0){
-				printf("Global Iter: %ld\n\n", iter+1);
+				printf("Global Iter: %ld, Thread = %d\n\n", iter+1, threadIdx);
 			}else if(iter % 10 == 0){
-				printf("Global Iter: %ld\n", iter+1);
+				printf("Global Iter: %ld, Thread = %d\n", iter+1, threadIdx);
 				printf("Permeability: %f\n", simInfo.Perm);
 				printf("Continuity RMS: %1.9f\n\n", RMS);
 			}
-			
-			explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
-			implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &opts, &simInfo);
-			momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &opts, &simInfo);
+			explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &myOpts, &simInfo);
+			implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &myOpts, &simInfo);
+			momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &myOpts, &simInfo);
 
-			RMS = ResidualContinuity(U, V, &opts, &simInfo);
+			RMS = ResidualContinuity(U, V, &myOpts, &simInfo);
 
-			PermCalc(U, &opts, &simInfo);
+			PermCalc(U, &myOpts, &simInfo);
 
 			iter++;
 		}
 
-		if(opts.printMaps == 1){
-			printPUVmaps(Pressure, U, V, &opts, &simInfo);
+		if(myOpts.printMaps == 1){
+			printPUVmaps(Pressure, U, V, &myOpts, &simInfo);
 		}
 
-		// printBatchOut(&opts, &simInfo, myImg, iter, RMS);
+		printBatchOut(&myOpts, &simInfo, myImg, iter, RMS);
 
 		// Save results to output file
 		
@@ -195,6 +211,13 @@ int main(void){
 		free(uExp);
 		free(vExp);
 		free(Grid);
+		free(targetImage);
+
+		// reset simInfo and info structs
+
+		memset(&simInfo, 0, sizeof(simInfo));
+		memset(&info, 0, sizeof(info));
+
 	}
 
 	return 0;
