@@ -130,15 +130,6 @@ int main(void){
 
 		// Initialize arrays
 
-		// memset(Pressure, 0, sizeof(Pressure));		// Initialized to avg. between PL and PR
-
-		// memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
-
-		// memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
-		// memset(vCoeff, 0, sizeof(vCoeff));								// Initialized to 0 because we solve for it first step
-
-		// memset(V, 0, sizeof(V));										// Initialize to 0 because it is the dominant flow
-
 		for(int row = 0; row<simInfo.numCellsY; row++){
 			for(int col = 0; col< simInfo.numCellsX+1; col++){
 				int index = row*(simInfo.numCellsX + 1) + col;
