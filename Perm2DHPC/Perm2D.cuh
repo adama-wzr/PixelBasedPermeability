@@ -524,6 +524,10 @@ float ResMap(float *U, float *V, options *o, simulationInfo *info){
 	float R = 0; 	// variable used to store the residual
 
 	float max = 0;
+	int maxRow, maxCol;
+
+	maxCol = 0;
+	maxRow = 0;
 
 	float cellCont = 0;
 
@@ -539,11 +543,13 @@ float ResMap(float *U, float *V, options *o, simulationInfo *info){
 			R += cellCont;
 			if(cellCont > max){
 				max = cellCont;
+				maxRow = row;
+				maxCol = col;
 			}
 		}
 	}
 
-	printf("Max Cell Continuity = %1.9f\n", max);
+	printf("Max Cell Continuity [%d][%d]= %1.9f\n", maxRow, maxCol, max);
 	fclose(MAP);
 	// R = R/(info->numCellsY*info->numCellsX);
 
@@ -640,7 +646,7 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 
 	for(int row = 0; row<nRowsU; row++){
 		QL += U[row*nColsU + 0]*Area;
-		QR += U[row*nColsU + (nColsU - 1)]*Area;
+		QR += U[row*nColsU + nColsU]*Area;
 	}
 
 	float Qavg = (QL + QR)/2;
@@ -1404,11 +1410,11 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			// fw and fe don't depend on corners
 			if (uCol == 0){
-				fwU = density*A*u[uRow*nColsU + uCol];
+				fwU = 1.0/2*density*A*u[uRow*nColsU + uCol];
 				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
 			} else if(uCol == nColsU -1){
 				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
-				feU = density*A*u[uRow*nColsU + uCol];
+				feU = 1.0/2*density*A*u[uRow*nColsU + uCol];
 			} else{
 				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
 				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
@@ -1417,28 +1423,28 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 			// fs and fn depend on boundaries a lot more
 			if(uCol == 0 && uRow == 0){
 				// top left corner
-				fnU = density*A*v[(nRowsV - 1)*nColsV + uCol];
-				fsU = density*A*v[(uRow + 1)*nColsV + uCol];
+				fnU = 1.0/2*density*A*v[(nRowsV - 1)*nColsV + uCol];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol];
 			} else if(uCol == 0 && uRow == nRowsU - 1){
 				// bottom left
-				fsU = density*A*v[0];
-				fnU = density*A*v[(uRow+1)*nColsV + uCol];
+				fsU = 1.0/2*density*A*v[0];
+				fnU = 1.0/2*density*A*v[(uRow+1)*nColsV + uCol];
 			} else if(uCol == 0){
 				// Anywhere in left boundary
-				fnU = density*A*v[uRow*nColsV + uCol];
-				fsU = density*A*v[(uRow + 1)*nColsV + uCol];
+				fnU = 1.0/2*density*A*v[uRow*nColsV + uCol];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol];
 			} else if(uCol == nColsU - 1 && uRow == 0){
 				// top right corner
-				fnU = density*A*v[(nRowsV - 1)*nColsV + uCol - 1];
-				fsU = density*A*v[(uRow + 1)*nColsV + uCol - 1];
+				fnU = 1.0/2*density*A*v[(nRowsV - 1)*nColsV + uCol - 1];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			}else if(uCol == nColsU - 1 && uRow == nRowsU - 1){
 				// bottom right corner
-				fnU = density*A*v[(uRow)*nColsV + uCol - 1];
-				fsU = density*A*v[(0)*nColsV + uCol - 1];
+				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = 1.0/2*density*A*v[(0)*nColsV + uCol - 1];
 			} else if(uCol == nColsU - 1){
 				// right boundary
-				fnU = density*A*v[(uRow)*nColsV + uCol - 1];
-				fsU = density*A*v[(uRow + 1)*nColsV + uCol - 1];
+				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			} else if(uRow == 0){
 				// top boundary
 				fnU = 1.0/2*density*A*(v[(nRowsV - 1)*nColsV + uCol] + v[(nRowsV - 1)*nColsV + uCol - 1]);
@@ -1601,6 +1607,7 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 	return 0;
 }
+
 
 int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff, float *vCoeff, float *Pressure,
 	options* o, simulationInfo* info)
