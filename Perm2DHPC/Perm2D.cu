@@ -18,8 +18,12 @@ int main(void){
 	// Set OpenMP CPU environment
 
 	int numThreads = opts.nCores;
+	int nGPUs;
 
 	omp_set_num_threads(numThreads);
+	cudaGetDeviceCount(&nGPUs);
+
+	printf("Do I even get here?CPU = %d, GPU = %d\n", numThreads, nGPUs);
 
 	// Start datastructures
 
@@ -29,7 +33,7 @@ int main(void){
 
 	domainInfo info;
 
-	#pragma omp parallel for schedule(auto) private(myOpts, simInfo, info)
+	#pragma omp parallel for schedule(runtime) private(myOpts, simInfo, info)
 	for(int myImg = 0; myImg<opts.nImg; myImg++){
 
 		// read options
@@ -116,6 +120,8 @@ int main(void){
 
 		FloodFill(Grid, &simInfo);
 
+		std::cout << "Flood Fill Successfull." << std::endl;
+
 		// Define arrays essential for the solution
 
 		float *Pressure = (float *)malloc(sizeof(float)*simInfo.nElements);					// store pressure
@@ -128,6 +134,8 @@ int main(void){
 		float *uCoeff = (float *)malloc(sizeof(float)*(simInfo.numCellsX+1)*simInfo.numCellsY);	// store U velocity coefficients
 		float *vCoeff = (float *)malloc(sizeof(float)*(simInfo.numCellsY+1)*simInfo.numCellsX);	// store V velocity coefficients
 
+		std::cout << "Allocated arrays Successfull." << std::endl;
+
 		// Initialize arrays
 
 		for(int row = 0; row<simInfo.numCellsY; row++){
@@ -138,11 +146,11 @@ int main(void){
 					Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(myOpts.PL - myOpts.PR) + myOpts.PR;
 				}
 				U[index] = 0.01;
-				V[index] = 0;
+				V[index] = 0.0;
 				uExp[index] = 0.01;
-				vExp[index] = 0;
-				uCoeff[index] = 0;
-				vCoeff[index] = 0;
+				vExp[index] = 0.0;
+				uCoeff[index] = 0.0;
+				vCoeff[index] = 0.0;
 			}	
 		}
 
@@ -151,6 +159,7 @@ int main(void){
 		float RMS = 1.0;
 		long int iter = 0;
 
+		std::cout << "Start loop Successfull." << std::endl;
 
 		while(iter < myOpts.MaxIterGlobal && RMS > myOpts.ConvergenceRMS){
 

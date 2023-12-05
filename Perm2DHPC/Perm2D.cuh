@@ -1410,11 +1410,11 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			// fw and fe don't depend on corners
 			if (uCol == 0){
-				fwU = 1.0/2*density*A*u[uRow*nColsU + uCol];
+				fwU = density*A*u[uRow*nColsU + uCol];
 				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
 			} else if(uCol == nColsU -1){
 				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
-				feU = 1.0/2*density*A*u[uRow*nColsU + uCol];
+				feU = density*A*u[uRow*nColsU + uCol];
 			} else{
 				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
 				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
@@ -1439,8 +1439,8 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			}else if(uCol == nColsU - 1 && uRow == nRowsU - 1){
 				// bottom right corner
-				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
-				fsU = 1.0/2*density*A*v[(0)*nColsV + uCol - 1];
+				fnU = density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = density*A*v[(0)*nColsV + uCol - 1];
 			} else if(uCol == nColsU - 1){
 				// right boundary
 				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];

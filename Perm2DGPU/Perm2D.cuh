@@ -1412,28 +1412,28 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 			// fs and fn depend on boundaries a lot more
 			if(uCol == 0 && uRow == 0){
 				// top left corner
-				fnU = density*A*v[(nRowsV - 1)*nColsV + uCol];
-				fsU = density*A*v[(uRow + 1)*nColsV + uCol];
+				fnU = 1.0/2*density*A*v[(nRowsV - 1)*nColsV + uCol];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol];
 			} else if(uCol == 0 && uRow == nRowsU - 1){
 				// bottom left
-				fsU = density*A*v[0];
-				fnU = density*A*v[(uRow+1)*nColsV + uCol];
+				fsU = 1.0/2*density*A*v[0];
+				fnU = 1.0/2*density*A*v[(uRow+1)*nColsV + uCol];
 			} else if(uCol == 0){
 				// Anywhere in left boundary
-				fnU = density*A*v[uRow*nColsV + uCol];
-				fsU = density*A*v[(uRow + 1)*nColsV + uCol];
+				fnU = 1.0/2*density*A*v[uRow*nColsV + uCol];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol];
 			} else if(uCol == nColsU - 1 && uRow == 0){
 				// top right corner
-				fnU = density*A*v[(nRowsV - 1)*nColsV + uCol - 1];
-				fsU = density*A*v[(uRow + 1)*nColsV + uCol - 1];
+				fnU = 1.0/2*density*A*v[(nRowsV - 1)*nColsV + uCol - 1];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			}else if(uCol == nColsU - 1 && uRow == nRowsU - 1){
 				// bottom right corner
 				fnU = density*A*v[(uRow)*nColsV + uCol - 1];
 				fsU = density*A*v[(0)*nColsV + uCol - 1];
 			} else if(uCol == nColsU - 1){
 				// right boundary
-				fnU = density*A*v[(uRow)*nColsV + uCol - 1];
-				fsU = density*A*v[(uRow + 1)*nColsV + uCol - 1];
+				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			} else if(uRow == 0){
 				// top boundary
 				fnU = 1.0/2*density*A*(v[(nRowsV - 1)*nColsV + uCol] + v[(nRowsV - 1)*nColsV + uCol - 1]);
@@ -1590,13 +1590,7 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 				} else{
 					vExp[vRow*nColsV + vCol] += o->alphaRelax/vCoeff[vRow*nColsV + vCol]*(asV*v[(0)*nColsV + vCol]);
 				}
-
-				// if(vCol == nColsV - 1){
-				// 	printf("vExp[row = %d, col = %d] = %f\n", vRow, vCol, vExp[vRow*nColsV + vCol]);
-				// 	printf("vCoeff[row = %d, col = %d] = %f\n", vRow, vCol, vCoeff[vRow*nColsV + vCol]);
-				// }
 			} // end of if statement
-
 		}
 	} // end of for loops
 
