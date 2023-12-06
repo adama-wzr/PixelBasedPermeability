@@ -23,7 +23,7 @@ int main(void){
 	omp_set_num_threads(numThreads);
 	cudaGetDeviceCount(&nGPUs);
 
-	printf("Do I even get here?CPU = %d, GPU = %d\n", numThreads, nGPUs);
+	printf("CPUs = %d, GPUs = %d\n", numThreads, nGPUs);
 
 	// Start datastructures
 
@@ -38,8 +38,6 @@ int main(void){
 
 		// read options
 		readInputFile(inputFilename, &myOpts);
-
-		printf("Pressure Left = %f\n", myOpts.PL);
 		
 		// Get thread index
 
