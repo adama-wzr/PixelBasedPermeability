@@ -291,9 +291,7 @@ int initializeGPU(float **d_x_vec, float **d_temp_x_vec, float **d_RHS, float **
 
 	// Set device, when cudaStatus is called give status of assigned device.
 	// This is important to know if we are running out of GPU space
-	cudaError_t cudaStatus = cudaSetDevice(omp_get_thread_num());
-	// cudaError_t cudaStatus;
-	// printf("Initializing GPU %d\n", omp_get_thread_num());
+	cudaError_t cudaStatus;
 
 	// Allocate all space in GPU
 
@@ -365,7 +363,7 @@ int initializeGPU(float **d_x_vec, float **d_temp_x_vec, float **d_RHS, float **
 
 void unInitializeGPU(float **d_x_vec, float **d_temp_x_vec, float **d_RHS, float **d_Coeff)
 {
-	cudaError_t cudaStatus = cudaSetDevice(omp_get_thread_num());
+	cudaError_t cudaStatus;
 
 	if((*d_x_vec)!=NULL)
     cudaStatus = cudaFree((*d_x_vec));
@@ -658,6 +656,133 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 	return 0;
 }
 
+
+int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulationInfo *info){
+
+	/*
+		Function pJacobiCPU2D
+		
+		Inputs:
+			- float *arr: pointer to array containing the coefficient matrix
+			- float *sol: pointer to the RHS of the discretization
+			- float *Pressure: pointer to the Pressure array
+			- options *o: pointer to datastructure of user entered options
+			- simulationInfo *info: datastructure of simulation and domain parameters
+
+		Outputs:
+			- None
+
+		Function will solved the linear system of equations Arr*Pressure = RHS for Pressure using
+		the Jacobi Iteration method. The coefficient matrix (arr) is only 5 diagonals. Note that at the top
+		and bottom of the domain, the boundary is periodic. This means an adjustment must be made
+		to the coefficient matrix to make sure we are multiplying the correct Pressures.
+
+		This algorithm also uses a simple openMP parallelization.
+	*/
+
+	/*
+	
+	Indexing is as follows:
+	
+	P = 0
+	W = 1
+	E = 2
+	S = 3
+	N = 4
+
+
+	*/
+	// Declare useful variables
+	int iterationCount = 0;
+	int iterLimit = o->MaxIterSolver;
+	float tolerance = o->ConvergenceSolver;
+	int nCols = info->numCellsX;
+	int nRows = info->numCellsY;
+
+	// Temporary Pressure Array
+
+	float *tempP = (float *)malloc(sizeof(float)*nCols*nRows);
+
+	for(int i = 0; i<nCols*nRows; i++){
+		tempP[i] = Pressure[i];
+	}
+
+	// More runtime related variables
+	
+	float conv_stat = 1;
+	float sigma = 0.0;
+	float norm_diff;
+	float convergence_criteria = 1;
+	int index;
+
+	while(convergence_criteria > tolerance && iterationCount < iterLimit)
+	{
+		#pragma omp parallel private(index, sigma)
+		#pragma omp for
+		for(index = 0; index<nCols*nRows; index++)
+		{
+			int myRow = index/nCols;
+			int myCol = index % nCols;
+			sigma = 0;
+			for(int j = 1; j<5; j++)
+			{
+				if(arr[index*5 + j] != 0)
+				{
+					if(j == 1)
+					{
+						sigma += arr[index*5 + j]*tempP[index - 1];
+					}else if(j == 2)
+					{
+						sigma += arr[index*5 + j]*tempP[index + 1];
+					} else if(j == 3)
+					{
+						if(myRow == nRows - 1)
+						{
+							sigma += arr[index*5 + j]*tempP[myCol];
+						} else
+						{
+							sigma += arr[index*5 + j]*tempP[index + nCols];
+						}
+					} else if(j == 4)
+					{
+						if(myRow == 0)
+						{
+							sigma += arr[index*5 + j]*tempP[(nRows - 1)*nCols + myCol];
+						} else
+						{
+							sigma += arr[index*5 + j]*tempP[index - nCols];
+						}
+					}
+				}
+			}
+			Pressure[index] = 1.0/arr[index*5 + 0]*(sol[index] - sigma);
+		}
+
+		if(iterationCount % 10000 == 0)
+		{
+			norm_diff = 0;
+			for(index = 0; index < nCols*nRows; index++)
+			{
+				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));
+			}
+			printf("Normalized Absolute Change = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
+		}
+
+		convergence_criteria = norm_diff;
+
+		for(int i = 0; i<nCols*nRows; i++){
+			tempP[i] = Pressure[i];
+		}
+
+		iterationCount++;
+
+	}
+
+	free(tempP);
+	return 0;
+}
+
+
 int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationInfo *info,
 	float *d_x_vec, float *d_temp_x_vec, float *d_Coeff, float *d_RHS){
 
@@ -713,11 +838,9 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 		tempP[i] = Pressure[i];
 	}
 
-	cudaError_t cudaStatus = cudaSetDevice(omp_get_thread_num());
-
 	//Copy arrays into GPU memory
 
-	cudaStatus = cudaMemcpy(d_temp_x_vec, tempP, sizeof(float) * info->nElements, cudaMemcpyHostToDevice);
+	cudaError_t cudaStatus = cudaMemcpy(d_temp_x_vec, tempP, sizeof(float) * info->nElements, cudaMemcpyHostToDevice);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "Pressure cudaMemcpy failed!");
 		str = cudaGetErrorString(cudaStatus);
@@ -1730,9 +1853,9 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 		}
 	}
 
-	// Declare GPU arrays
+	// Solve
 
-	cudaSetDevice(omp_get_thread_num());
+	// Declare GPU arrays
 
 	float *d_x_vec = NULL;
 	float *d_temp_x_vec = NULL;
@@ -1749,10 +1872,7 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 		return 0;
 	}
 
-	// Solve
 	JacobiGPU2D(A, RHS, Pressure, o, info, d_x_vec, d_temp_x_vec, d_Coeff, d_RHS);
-
-	// Free GPU
 	unInitializeGPU(&d_x_vec, &d_temp_x_vec, &d_RHS, &d_Coeff);
 
 	free(A);
