@@ -25,27 +25,36 @@ int main(void){
 
 	printf("Do I even get here?CPU = %d, GPU = %d\n", numThreads, nGPUs);
 
-	// Start datastructures
+	// Let's pre allocate all arrays here globally and then distribute them
 
-	options myOpts;
+	int nRows = opts.MeshAmp*128;
+	int nCols = opts.MeshAmp*128;
+	int nElements = nRows*nCols;
 
-	simulationInfo simInfo;
+	unsigned int *Global_Grid = (unsigned int*)malloc(sizeof(int)*nElements*nGPUs);
 
-	domainInfo info;
+	float *Global_Pressure = (float *)malloc(sizeof(float)*nElements*nGPUs);					// store pressure
+	float *Global_U = (float *)malloc(sizeof(float)*(nCols+1)*nRows*nGPUs);	// store U velocity
+	float *Global_V = (float *)malloc(sizeof(float)*(nCols+1)*nRows*nGPUs);	// store V velocity
 
-	#pragma omp parallel for schedule(runtime) private(myOpts, simInfo, info)
+	float *Global_uExp = (float *)malloc(sizeof(float)*(nCols+1)*nRows*nGPUs);	// store explicit U velocity
+	float *Global_vExp = (float *)malloc(sizeof(float)*(nCols+1)*nRows*nGPUs);	// store explicit V velocity
+
+	float *Global_uCoeff = (float *)malloc(sizeof(float)*(nCols+1)*nRows*nGPUs);	// store U velocity coefficients
+	float *Global_vCoeff = (float *)malloc(sizeof(float)*(nCols+1)*nRows*nGPUs);	// store V velocity coefficients
+
+	#pragma omp parallel for schedule(auto)
 	for(int myImg = 0; myImg<opts.nImg; myImg++){
 
-		// read options
-		readInputFile(inputFilename, &myOpts);
+		// Start datastructures
 
-		printf("Pressure Left = %f\n", myOpts.PL);
+		simulationInfo simInfo;
 		
 		// Get thread index
 
 		int threadIdx = omp_get_thread_num();
 
-		printf("Thread idx = %d, img num = %d\n", threadIdx, myImg);
+		printf("Thread idx = %d, Img num = %d\n", threadIdx, myImg);
 
 		cudaSetDevice(threadIdx);
 
@@ -59,15 +68,13 @@ int main(void){
 
 		readImage(&targetImage, &width, &height, &channel, filename);
 
-		myOpts.inputFilename = filename;
-
 		if (channel != 1){
 			printf("Error: please enter a grascale image with 1 channel.\n Current number of channels = %d\n", channel);
 		}
 
 		simInfo.porosity = calcPorosity(targetImage, width, height);
 
-		if(myOpts.verbose == 1){
+		if(opts.verbose == 1){
 			std::cout << "Image Parameters:" << std::endl;
 			std::cout <<  "\n--------------------------------------" << std::endl;
 			std::cout << "Width (pixels) = " << width << " Height (pixels) = " << height << " Channel = " << channel << std::endl;
@@ -76,20 +83,20 @@ int main(void){
 
 		// Define mesh related parameters
 
-		simInfo.numCellsX = width*myOpts.MeshAmp;			// Simulation Grid width in number of cells
-		simInfo.numCellsY = height*myOpts.MeshAmp;		// Simulation Grid height in number of cells
+		simInfo.numCellsX = width*opts.MeshAmp;			// Simulation Grid width in number of cells
+		simInfo.numCellsY = height*opts.MeshAmp;		// Simulation Grid height in number of cells
 		simInfo.nElements = simInfo.numCellsY*simInfo.numCellsX;	// Number of elements (total)
-		simInfo.dx = myOpts.DomainWidth/simInfo.numCellsX;			// dx
-		simInfo.dy = myOpts.DomainWidth/simInfo.numCellsY;			// dy
+		simInfo.dx = opts.DomainWidth/simInfo.numCellsX;			// dx
+		simInfo.dy = opts.DomainWidth/simInfo.numCellsY;			// dy
 
-		unsigned int *Grid = (unsigned int*)malloc(sizeof(int)*simInfo.numCellsX*simInfo.numCellsY);		// Array that will hold binary domain (solid vs fluid)
+		unsigned int *Grid = Global_Grid + threadIdx * nElements;		// Array that will hold binary domain (solid vs fluid)
 
 		// Mesh Amplify and decode image into binary matrix
 
 		for(int i = 0; i<simInfo.numCellsY; i++){
 			for (int j = 0; j<simInfo.numCellsX; j++){
-				int targetIndex_Row = i/myOpts.MeshAmp;
-				int targetIndex_Col = j/myOpts.MeshAmp;
+				int targetIndex_Row = i/opts.MeshAmp;
+				int targetIndex_Col = j/opts.MeshAmp;
 				if(targetImage[targetIndex_Row*width + targetIndex_Col] < 150){
 					Grid[i*simInfo.numCellsX + j] = 0; 			// black => fluid => 0 => void
 				} else{
@@ -98,43 +105,28 @@ int main(void){
 			}
 		}
 
-		// Next step is running the pathfinding algorithm
-		// If there is no path, don't simulate permeability
-
-		bool pathFlag = false;
-
-		
-		info.xSize = simInfo.numCellsX;
-		info.ySize = simInfo.numCellsY;
-		info.verbose = 0;
-
-		pathFlag = aStarMain(Grid, info);
-
-		if(pathFlag == false){
-			std::cout << "No valid path found, exiting now." << std::endl;
-		}else if(myOpts.verbose == 1){
-			std::cout << "Valid path found.\nProceeding to permeability CFD simulation." << std::endl;
-		}
+		// Free target_image since it is not needed anymore
+		free(targetImage);
 
 		// Flood Fill to eliminate non-participating media
 
 		FloodFill(Grid, &simInfo);
 
-		std::cout << "Flood Fill Successfull." << std::endl;
+		std::cout << "Flood Fill Successfull. Thread = " << threadIdx << std::endl;
 
 		// Define arrays essential for the solution
 
-		float *Pressure = (float *)malloc(sizeof(float)*simInfo.nElements);					// store pressure
-		float *U = (float *)malloc(sizeof(float)*(simInfo.numCellsX+1)*simInfo.numCellsY);	// store U velocity
-		float *V = (float *)malloc(sizeof(float)*(simInfo.numCellsY+1)*simInfo.numCellsX);	// store V velocity
+		float *Pressure = Global_Pressure + threadIdx * nElements;
+		float *U = Global_U + threadIdx * (nCols + 1)*nRows;
+		float *V = Global_V + threadIdx * (nRows + 1)*nCols;
 
-		float *uExp = (float *)malloc(sizeof(float)*(simInfo.numCellsX+1)*simInfo.numCellsY);	// store explicit U velocity
-		float *vExp = (float *)malloc(sizeof(float)*(simInfo.numCellsY+1)*simInfo.numCellsX);	// store explicit V velocity
+		float *uExp = Global_uExp + threadIdx * (nCols + 1)*nRows;
+		float *vExp = Global_vExp + threadIdx * (nRows + 1)*nCols;
 
-		float *uCoeff = (float *)malloc(sizeof(float)*(simInfo.numCellsX+1)*simInfo.numCellsY);	// store U velocity coefficients
-		float *vCoeff = (float *)malloc(sizeof(float)*(simInfo.numCellsY+1)*simInfo.numCellsX);	// store V velocity coefficients
+		float *uCoeff = Global_uCoeff + threadIdx * (nCols + 1)*nRows;
+		float *vCoeff = Global_vCoeff + threadIdx * (nRows + 1)*nCols;
 
-		std::cout << "Allocated arrays Successfull." << std::endl;
+		std::cout << "Allocated arrays Successfull. Thread = " << threadIdx << std::endl;
 
 		// Initialize arrays
 
@@ -143,7 +135,7 @@ int main(void){
 				int index = row*(simInfo.numCellsX + 1) + col;
 				if(col < simInfo.numCellsX){
 					// Pressure[row*(simInfo.numCellsX) + col] = (opts.PL + opts.PR)/2;
-					Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(myOpts.PL - myOpts.PR) + myOpts.PR;
+					Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(opts.PL - opts.PR) + opts.PR;
 				}
 				U[index] = 0.01;
 				V[index] = 0.0;
@@ -161,7 +153,7 @@ int main(void){
 
 		std::cout << "Start loop Successfull." << std::endl;
 
-		while(iter < myOpts.MaxIterGlobal && RMS > myOpts.ConvergenceRMS){
+		while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS){
 
 			/*
 				SUV-CUT procedure:
@@ -182,41 +174,38 @@ int main(void){
 				printf("Permeability: %f\n", simInfo.Perm);
 				printf("Continuity RMS: %1.9f\n\n", RMS);
 			}
-			explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &myOpts, &simInfo);
-			implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &myOpts, &simInfo);
-			momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &myOpts, &simInfo);
+			// std::cout << "Thread Num:" << omp_get_thread_num() << "Explicit Momentum Iter" << iter << std::endl;
+			explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
+			// std::cout << "Thread Num:" << omp_get_thread_num() << "implicitPressure Iter" << iter << std::endl;
+			implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &opts, &simInfo);
+			// std::cout << "Thread Num:" << omp_get_thread_num() << "Momentum Correction Iter" << iter << std::endl;
+			momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &opts, &simInfo);
 
-			RMS = ResidualContinuity(U, V, &myOpts, &simInfo);
+			RMS = ResidualContinuity(U, V, &opts, &simInfo);
 
-			PermCalc(U, &myOpts, &simInfo);
+			PermCalc(U, &opts, &simInfo);
 
 			iter++;
 		}
 
-		if(myOpts.printMaps == 1){
-			printPUVmaps(Pressure, U, V, &myOpts, &simInfo);
+		if(opts.printMaps == 1){
+			printPUVmaps(Pressure, U, V, &opts, &simInfo);
 		}
 
-		printBatchOut(&myOpts, &simInfo, myImg, iter, RMS);
+		printBatchOut(&opts, &simInfo, myImg, iter, RMS);
 
 		// Save results to output file
 		
 		// Housekeeping
 
-		free(Pressure);
-		free(U);
-		free(V);
-		free(uCoeff);
-		free(vCoeff);
-		free(uExp);
-		free(vExp);
-		free(Grid);
-		free(targetImage);
-
-		// reset simInfo and info structs
-
-		memset(&simInfo, 0, sizeof(simInfo));
-		memset(&info, 0, sizeof(info));
+		// free(Pressure);
+		// free(U);
+		// free(V);
+		// free(uCoeff);
+		// free(vCoeff);
+		// free(uExp);
+		// free(vExp);
+		// free(Grid);
 
 	}
 
