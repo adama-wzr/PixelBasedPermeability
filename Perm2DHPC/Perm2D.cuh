@@ -785,7 +785,7 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 			convergence_criteria = norm_diff;
 		}
 
-		// update temporary x-vector with new values, both on Device (GPU)
+		// update temporary x-vector with new values on Device (GPU)
 
 		cudaStatus = cudaMemcpy(d_temp_x_vec, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToDevice);
 		if (cudaStatus != cudaSuccess) {

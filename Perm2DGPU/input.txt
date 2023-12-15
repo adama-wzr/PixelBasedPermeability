@@ -7,12 +7,12 @@ MeshAmp: 3
 InputName: 00000.jpg
 PL: 100
 PR: 99
-RelaxFactor: 0.3
+RelaxFactor: 0.1
 OutputName: testGPU.csv
 printMaps: 1
-MaxIterGlobal: 50
+MaxIterGlobal: 100
 ResidualConv: 1e-8
 MaxIterSolver: 100000
-SolverConv: 0.000001
-nCores: 10
+SolverConv: 0.00001
+nCores: 1
 Verbose: 1

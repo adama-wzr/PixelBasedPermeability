@@ -822,6 +822,8 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 		tempP[i] = Pressure[i];
 	}
 
+	cudaSetDevice(0);
+
 	//Copy arrays into GPU memory
 
 	cudaError_t cudaStatus = cudaMemcpy(d_temp_x_vec, tempP, sizeof(float) * info->nElements, cudaMemcpyHostToDevice);
@@ -867,42 +869,40 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 		updateX_V1<<<numBlocks, threads_per_block>>>(d_Coeff, d_temp_x_vec, d_RHS, d_x_vec, info->numCellsX, info->numCellsY);
 
 		cudaDeviceSynchronize();
-
-		// update temporary x-vector with new values on the device
-
-		d_temp_x_vec = d_x_vec;
-
-		// cudaStatus = cudaMemcpy(d_temp_x_vec, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyHostToHost);
-		// if (cudaStatus != cudaSuccess) {
-		// 	fprintf(stderr, "d_temp_x_vec cudaMemcpy failed!");
-		// 	str = cudaGetErrorString(cudaStatus);
-		// 	fprintf(stderr, "CUDA Error!:: %s\n", str);
-		// }
-
-		// update the x_vec on host
-
-		cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToHost);
-		if (cudaStatus != cudaSuccess) {
-			fprintf(stderr, "Pressure cudaMemcpy failed!");
-			str = cudaGetErrorString(cudaStatus);
-			fprintf(stderr, "CUDA Error!:: %s\n", str);
-		}
+		
+		// Convergence related material
 
 		if(iterationCount % 10000 == 0)
-		{	
+		{
+			cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToHost);
+			if (cudaStatus != cudaSuccess) {
+				fprintf(stderr, "Pressure cudaMemcpy failed!");
+				str = cudaGetErrorString(cudaStatus);
+				fprintf(stderr, "CUDA Error!:: %s\n", str);
+			}
+			// Copy the Pressure from last iteration from GPU to host
+			cudaStatus = cudaMemcpy(tempP, d_temp_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToHost);
+			if (cudaStatus != cudaSuccess) {
+				fprintf(stderr, "tempP cudaMemcpy failed!");
+				str = cudaGetErrorString(cudaStatus);
+				fprintf(stderr, "CUDA Error!:: %s\n", str);
+			}
 			norm_diff = 0;
 			for(index = 0; index < nCols*nRows; index++)
 			{
-				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));
+				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));;
 			}
 			printf("Normalized Absolute Change = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
 		}
 
-		for(int i = 0; i<nCols*nRows; i++){
-			tempP[i] = Pressure[i];
+		// update temporary x-vector with new values on Device (GPU)
+
+		cudaStatus = cudaMemcpy(d_temp_x_vec, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToDevice);
+		if (cudaStatus != cudaSuccess) {
+			fprintf(stderr, "d_temp_x_vec cudaMemcpy failed!");
+			str = cudaGetErrorString(cudaStatus);
+			fprintf(stderr, "CUDA Error!:: %s\n", str);
 		}
-		// tempP = Pressure;
-		// memcpy(tempP, Pressure, sizeof(Pressure));
 
 		convergence_criteria = norm_diff;
 		
