@@ -617,8 +617,6 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 		Function will calculate the normalized permeability at each step.
 	*/
 
-	float QL = 0;
-	float QR = 0;
 	float dx, dy;
 	dx = info->dx;
 	dy = info->dy;
@@ -628,12 +626,22 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 	int nRowsU = info->numCellsY;
 	int nColsU = info->numCellsX + 1;
 
-	for(int row = 0; row<nRowsU; row++){
-		QL += U[row*nColsU + 0]*Area;
-		QR += U[row*nColsU + (nColsU - 1)]*Area;
+	float *FlowRate = (float *)malloc(sizeof(float)*nColsU);
+
+	for(int k = 0; k<nColsU; k++){
+		FlowRate[k] = 0;
+		for(int row = 0; row<nRowsU; row++){
+			FlowRate[k] += U[row*nColsU + k]*Area;	
+		}
 	}
 
-	float Qavg = (QL + QR)/2;
+	float Qavg = 0;
+
+	for(int k = 0; k<nColsU; k++){
+		Qavg += FlowRate[k];
+	}
+
+	Qavg = Qavg/nColsU;
 
 	// info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR));
 	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx)*1000;
