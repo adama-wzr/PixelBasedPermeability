@@ -98,15 +98,6 @@ int main(void){
 
 	// Initialize arrays
 
-	memset(Pressure, 0, sizeof(Pressure));		// Initialized to avg. between PL and PR
-
-	memset(vExp, 0, sizeof(vExp));									// Initialized to 0 because we will solve for it first step
-
-	memset(uCoeff, 0, sizeof(uCoeff));								// Initialized to 0 because we solve for it first step
-	memset(vCoeff, 0, sizeof(vCoeff));								// Initialized to 0 because we solve for it first step
-
-	memset(V, 0, sizeof(V));										// Initialize to 0 because it is the dominant flow
-
 	for(int row = 0; row<simInfo.numCellsY; row++){
 		for(int col = 0; col< simInfo.numCellsX+1; col++){
 			int index = row*(simInfo.numCellsX + 1) + col;
@@ -116,6 +107,10 @@ int main(void){
 			}
 			U[index] = 0.01;
 			uExp[index] = 0.01;
+			uCoeff[index] = 0;
+			V[index] = 0;
+			vCoeff[index] = 0;
+			vExp[index] = 0;
 		}	
 	}
 
@@ -123,6 +118,10 @@ int main(void){
 
 	float RMS = 1.0;
 	long int iter = 0;
+
+	float tempAlpha = opts.alphaRelax;
+
+	opts.alphaRelax = 0.1;
 
 	FILE *OUT;
 
@@ -152,6 +151,9 @@ int main(void){
 			printf("Continuity RMS: %1.9f\n\n", RMS);
 		}
 		
+		if(iter == 5){
+			opts.alphaRelax = tempAlpha;
+		}
 
 		explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
 
