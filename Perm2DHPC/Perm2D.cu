@@ -137,7 +137,6 @@ int main(void){
 			for(int col = 0; col< simInfo.numCellsX+1; col++){
 				int index = row*(simInfo.numCellsX + 1) + col;
 				if(col < simInfo.numCellsX){
-					// Pressure[row*(simInfo.numCellsX) + col] = (opts.PL + opts.PR)/2;
 					Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(opts.PL - opts.PR) + opts.PR;
 				}
 				U[index] = 0.01;
@@ -195,7 +194,7 @@ int main(void){
 
 			PermCalc(U, &opts, &simInfo);
 
-			if(convFlag == true)
+			if(convFlag == true && iter % 10 == 0)
 			{
 				FILE *CONV;
 				CONV = fopen(convFile, "a+");
@@ -216,14 +215,14 @@ int main(void){
 		
 		// Housekeeping
 
-		free(Pressure);
-		free(U);
-		free(V);
-		free(uCoeff);
-		free(vCoeff);
-		free(uExp);
-		free(vExp);
-		free(Grid);
+		// free(Pressure);
+		// free(U);
+		// free(V);
+		// free(uCoeff);
+		// free(vCoeff);
+		// free(uExp);
+		// free(vExp);
+		// free(Grid);
 
 	}
 
