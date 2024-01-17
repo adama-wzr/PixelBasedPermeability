@@ -117,6 +117,47 @@ __global__ void updateX_V1(float* A, float* x, float* b, float* xNew, int numCel
 }
 
 
+__global__ void updateX_SOR(float* A, float* x, float* b, float* xNew, int numCellsX, int numCellsY)
+{
+	// Figure out the index
+	unsigned int myIdx = blockIdx.x * blockDim.x + threadIdx.x;
+	// break index into row and col
+	int myRow = myIdx/numCellsX;
+	int myCol = myIdx % numCellsX;
+	float w = 2.0/3.0;
+
+	int nElements = numCellsX*numCellsY;
+
+	// do the Jacobi Iteration with periodic BC
+
+	if (myIdx < nElements){
+		float sigma = 0;
+		for(int j = 1; j<5; j++){
+			if(A[myIdx*5 + j] !=0){
+				if(j == 1){
+					sigma += A[myIdx*5 + j]*x[myIdx - 1];
+				} else if(j == 2){
+					sigma += A[myIdx*5 + j]*x[myIdx + 1];
+				} else if(j == 3){
+					if(myRow == numCellsY - 1){
+						sigma += A[myIdx*5 + j]*x[myCol];
+					}else{
+						sigma += A[myIdx*5 + j]*x[myIdx + numCellsX];
+					}
+				} else if(j == 4){
+					if(myRow == 0){
+						sigma += A[myIdx*5 + j]*x[(numCellsY - 1)*numCellsX + myCol];
+					}else{
+						sigma += A[myIdx*5 + j]*x[myIdx - numCellsX];
+					}
+				}
+			}
+		}
+		xNew[myIdx] = (1.0-w)*x[myIdx] + w/A[myIdx*5 + 0] * (b[myIdx] - sigma);
+	}
+}
+
+
 int printOptions(options* opts){
 	/*
 		printOptions Function:
@@ -757,8 +798,8 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 		
 		// Call Kernel to Calculate new x-vector
 		
-		updateX_V1<<<numBlocks, threads_per_block>>>(d_Coeff, d_temp_x_vec, d_RHS, d_x_vec, info->numCellsX, info->numCellsY);
-
+		// updateX_V1<<<numBlocks, threads_per_block>>>(d_Coeff, d_temp_x_vec, d_RHS, d_x_vec, info->numCellsX, info->numCellsY);
+		updateX_SOR<<<numBlocks, threads_per_block>>>(d_Coeff, d_temp_x_vec, d_RHS, d_x_vec, info->numCellsX, info->numCellsY);
 		// Convergence related material
 
 		if(iterationCount % 10000 == 0)
@@ -780,7 +821,7 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 			norm_diff = 0;
 			for(index = 0; index < nCols*nRows; index++)
 			{
-				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));
+				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));;
 			}
 			convergence_criteria = norm_diff;
 		}
