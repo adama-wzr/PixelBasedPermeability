@@ -7,6 +7,8 @@ int main(void){
 
 	// Parse user entered options
 
+	bool convFlag = true;
+
 	options opts;	// struct to hold options
 
 	char inputFilename[100];
@@ -63,6 +65,7 @@ int main(void){
 		int width, height, channel;
 		unsigned char* targetImage;
 		char filename[100];
+		char convFile[100];
 
 		sprintf(filename, "%05d.jpg", myImg);
 
@@ -146,6 +149,13 @@ int main(void){
 			}	
 		}
 
+		// start file to get convergence data
+
+		if(convFlag == true)
+		{
+			sprintf(convFile, "ConvData_%05d.csv", myImg);
+		}
+
 		// Now we use the SUV-CUT algorithm to solve velocity-pressure coupled
 
 		float RMS = 1.0;
@@ -185,12 +195,20 @@ int main(void){
 
 			PermCalc(U, &opts, &simInfo);
 
+			if(convFlag == true)
+			{
+				FILE *CONV;
+				CONV = fopen(convFile, "a+");
+				fprintf(CONV, "%ld,%1.9f,%1.9f,%f,%d\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp);
+				fclose(CONV);
+			}
+
 			iter++;
 		}
 
-		if(opts.printMaps == 1){
-			printPUVmaps(Pressure, U, V, &opts, &simInfo);
-		}
+		// if(opts.printMaps == 1){
+		// 	printPUVmaps(Pressure, U, V, &opts, &simInfo);
+		// }
 
 		printBatchOut(&opts, &simInfo, myImg, iter, RMS);
 
@@ -198,14 +216,14 @@ int main(void){
 		
 		// Housekeeping
 
-		// free(Pressure);
-		// free(U);
-		// free(V);
-		// free(uCoeff);
-		// free(vCoeff);
-		// free(uExp);
-		// free(vExp);
-		// free(Grid);
+		free(Pressure);
+		free(U);
+		free(V);
+		free(uCoeff);
+		free(vCoeff);
+		free(uExp);
+		free(vExp);
+		free(Grid);
 
 	}
 
