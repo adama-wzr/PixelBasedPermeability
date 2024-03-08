@@ -61,25 +61,6 @@ int main(void){
 		}
 	}
 
-	// Next step is running the pathfinding algorithm
-	// If there is no path, don't simulate permeability
-
-	bool pathFlag = false;
-
-	domainInfo info;
-	info.xSize = simInfo.numCellsX;
-	info.ySize = simInfo.numCellsY;
-	info.verbose = 0;
-
-	pathFlag = aStarMain(Grid, info);
-
-	if(pathFlag == false){
-		std::cout << "No valid path found, exiting now." << std::endl;
-		return 1;
-	}else if(opts.verbose == 1){
-		std::cout << "Valid path found.\nProceeding to permeability CFD simulation." << std::endl;
-	}
-
 	// Flood Fill to eliminate non-participating media
 
 	FloodFill(Grid, &simInfo);
