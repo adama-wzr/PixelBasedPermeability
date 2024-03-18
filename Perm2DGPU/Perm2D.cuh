@@ -45,6 +45,7 @@ typedef struct{
 	float porosity;
 	float gpuTime;
 	float Perm;
+	float Flowrate;
 	float ResidualX;
 	float ResidualY;
 	float ResidualP;
@@ -661,8 +662,10 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 
 	free(FlowRate);
 
+	info->Flowrate = Qavg;
+
 	// info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR));
-	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx)*1000;
+	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx);
 	return 0;
 }
 

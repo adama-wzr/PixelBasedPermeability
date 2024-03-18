@@ -100,17 +100,19 @@ int main(void){
 	float RMS = 1.0;
 	long int iter = 0;
 
-	float tempAlpha = opts.alphaRelax;
+	float PermTHR = 0.001;
 
-	opts.alphaRelax = 0.1;
+	float PermOld = 1;
+
+	float PermChange = 1;
 
 	FILE *OUT;
 
 	OUT = fopen("ConvergenceData.csv", "w");
 
-	fprintf(OUT, "iter,K,R,alpha,mesh\n");
+	fprintf(OUT, "iter,K,R,alpha,mesh,Qavg\n");
 
-	while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS){
+	while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS && PermChange > PermTHR){
 
 		/*
 			SUV-CUT procedure:
@@ -126,14 +128,11 @@ int main(void){
 
 		if(iter == 0){
 			printf("Global Iter: %ld\n\n", iter+1);
-		}else{
+		}else if(iter % 20 == 0){
 			printf("Global Iter: %ld\n", iter+1);
 			printf("Permeability: %f\n", simInfo.Perm);
-			printf("Continuity RMS: %1.9f\n\n", RMS);
-		}
-		
-		if(iter == 5){
-			opts.alphaRelax = tempAlpha;
+			printf("Continuity RMS: %1.9f\n", RMS);
+			printf("Perm Change: %1.6f\n\n", PermChange);
 		}
 
 		explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
@@ -146,7 +145,12 @@ int main(void){
 
 		PermCalc(U, &opts, &simInfo);
 
-		fprintf(OUT, "%ld,%1.9f,%1.9f,%f,%d\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp);
+		fprintf(OUT, "%ld,%1.9f,%1.9f,%f,%d,%1.9f\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp, simInfo.Flowrate);
+
+		if(iter % 100 == 0){
+			PermChange = fabs((simInfo.Perm - PermOld)/(simInfo.Perm));
+			PermOld = simInfo.Perm;
+		}
 
 		iter++;
 	}
