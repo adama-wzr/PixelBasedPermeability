@@ -770,7 +770,7 @@ int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulation
 			Pressure[index] = 1.0/arr[index*5 + 0]*(sol[index] - sigma);
 		}
 
-		if(iterationCount % 10000 == 0)
+		if(iterationCount % 100000 == 0)
 		{
 			norm_diff = 0;
 			for(index = 0; index < nCols*nRows; index++)
@@ -899,7 +899,7 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 		
 		// Convergence related material
 
-		if(iterationCount % 10000 == 0)
+		if(iterationCount % 100000 == 0)
 		{
 			cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToHost);
 			if (cudaStatus != cudaSuccess) {
@@ -917,7 +917,7 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 			norm_diff = 0;
 			for(index = 0; index < nCols*nRows; index++)
 			{
-				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));;
+				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));
 			}
 			printf("Normalized Absolute Change = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
 		}
@@ -1318,16 +1318,29 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			// Check if V is in a solid interface. If not gather coefficients and calculate explicit component
 
-			if(vRow == 0 && Grid[vRow*nColsV + vCol] == 1){
-				vExp[vRow*nColsV + vCol] = 0;
-				vCoeff[vRow*nColsV + vCol] = 1;
-			} else if(vRow == nRowsV - 1 && Grid[(vRow - 1)*nColsV + vCol] == 1){
-				vExp[vRow*nColsV + vCol] = 0;
-				vCoeff[vRow*nColsV + vCol] = 1;
+			bool discFlag = true;
+
+			if(vRow == 0){
+				if(Grid[vRow*nColsV + vCol] == 1){
+					// North boundary and grid is solid
+					vExp[vRow*nColsV + vCol] = 0;
+					vCoeff[vRow*nColsV + vCol] = 1;
+					discFlag = false;
+				}	
+			}else if(vRow == nRowsV - 1){
+				if(Grid[(vRow - 1)*nColsV + vCol] == 1){
+					// South boundary and grid is solid
+					vExp[vRow*nColsV + vCol] = 0;
+					vCoeff[vRow*nColsV + vCol] = 1;
+					discFlag = false;
+				}
 			} else if(Grid[vRow*nColsV + vCol] == 1 || Grid[(vRow - 1)*nColsV + vCol] == 1){
 				vExp[vRow*nColsV + vCol] = 0;
 				vCoeff[vRow*nColsV + vCol] = 1;
-			} else{
+				discFlag = false;
+			}
+
+			if(discFlag == true){
 				// Hybrid Discretization
 				awV = findMax(fwV, d + fwV/2, 0.0f);
 				aeV = findMax(-feV, d - feV/2, 0.0f);

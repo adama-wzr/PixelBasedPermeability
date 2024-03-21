@@ -84,7 +84,7 @@ int main(void){
 			int index = row*(simInfo.numCellsX + 1) + col;
 			if(col < simInfo.numCellsX){
 				// Pressure[row*(simInfo.numCellsX) + col] = (opts.PL + opts.PR)/2;
-				Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(opts.PL - opts.PR) + opts.PR;
+				Pressure[row*(simInfo.numCellsX) + col] = opts.PR;
 			}
 			U[index] = 0.01;
 			uExp[index] = 0.01;
@@ -108,7 +108,7 @@ int main(void){
 
 	FILE *OUT;
 
-	OUT = fopen("ConvergenceData.csv", "w");
+	OUT = fopen("ConvData.csv", "w");
 
 	fprintf(OUT, "iter,K,R,alpha,mesh,Qavg\n");
 
