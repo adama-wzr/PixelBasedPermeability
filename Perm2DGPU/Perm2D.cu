@@ -131,7 +131,7 @@ int main(void){
 		}else if(iter % 20 == 0){
 			printf("Global Iter: %ld\n", iter+1);
 			printf("Permeability: %f\n", simInfo.Perm);
-			printf("Continuity RMS: %1.9f\n", RMS);
+			printf("Continuity RMS: %1.2e\n", RMS);
 			printf("Perm Change: %1.6f\n\n", PermChange);
 		}
 
@@ -141,13 +141,12 @@ int main(void){
 
 		momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &opts, &simInfo);
 
-		RMS = ResidualContinuity(U, V, &opts, &simInfo);
-
 		PermCalc(U, &opts, &simInfo);
 
 		fprintf(OUT, "%ld,%1.9f,%1.9f,%f,%d,%1.9f\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp, simInfo.Flowrate);
 
 		if(iter % 100 == 0){
+			RMS = ResidualContinuity(U, V, &opts, &simInfo);
 			PermChange = fabs((simInfo.Perm - PermOld)/(simInfo.Perm));
 			PermOld = simInfo.Perm;
 		}
