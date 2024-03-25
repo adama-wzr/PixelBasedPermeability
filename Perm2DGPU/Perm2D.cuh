@@ -670,6 +670,79 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 }
 
 
+float JacobiConv(float *arr, float *RHS, float *Pressure, simulationInfo *info)
+{
+	/*
+		Function JacobiConv:
+
+		Inputs:
+			- float *arr: pointer to coefficient matrix array
+			- float *sol: pointer to RHS array (Ax = b, this is b)
+			- float *Pressure: pointer to x array (Ax = b, this is x)
+			- simulationInfo *info: pointer to data struct with information about the mesh
+		
+		Outputs:
+			- Returns the residual value calculated as a float
+
+		Function will calculate a residual for assessing Jacobi convergence. The Ax = b system, in theory,
+		should yield (b - Ax) = 0. In practice, the solution yields x_bar, such that (b - Ax_bar) > 0.
+
+		This function returns r = 1/N*(sum(fabs(b - Ax_bar))) for a A being N x N and 
+		x_bar and b being N in length. r is a positive scalar.
+	
+	*/
+
+	float ResidualCalc = 0;
+
+	int nRows = info->numCellsY;
+	int nCols = info->numCellsX;
+
+	for(int i = 0; i<nRows; i++){
+		for(int j = 0; j<nCols; j++){
+			int index = i*nCols + j;
+			float sumAx = 0;
+
+			for(int A_col = 0; A_col < 5; A_col++){
+				if(arr[index*5 + A_col] != 0){
+					if(A_col == 0)
+					{
+						sumAx += arr[index*5 + A_col]*Pressure[index];
+					} else if(A_col == 1)
+					{
+						sumAx += arr[index*5 + A_col]*Pressure[index - 1];		
+					} else if(A_col == 2)
+					{
+						sumAx += arr[index*5 + A_col]*Pressure[index + 1];		
+					}else if(j == 3)
+					{
+						if(i == nRows - 1)
+						{
+							sumAx += arr[index*5 + A_col]*Pressure[j];
+						} else
+						{
+							sumAx += arr[index*5 + A_col]*Pressure[index + nCols];
+						}
+					} else if(j == 4)
+					{
+						if(i == 0)
+						{
+							sumAx += arr[index*5 + A_col]*Pressure[(nRows - 1)*nCols + j];
+						} else
+						{
+							sumAx += arr[index*5 + A_col]*Pressure[index - nCols];
+						}
+					}
+				}
+			}
+
+			ResidualCalc += (1.0/(float)info->nElements)*fabs(RHS[index] - sumAx);
+		}
+	}
+
+	return ResidualCalc;
+}
+
+
 int pJacobiCPU2D(float *arr, float *sol, float *Pressure, options *o, simulationInfo *info){
 
 	/*
@@ -899,7 +972,7 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 		
 		// Convergence related material
 
-		if(iterationCount % 100000 == 0)
+		if(iterationCount % 1000 == 0)
 		{
 			cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToHost);
 			if (cudaStatus != cudaSuccess) {
@@ -919,7 +992,14 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 			{
 				norm_diff += fabs((Pressure[index] - tempP[index])/(o->PL*(nCols*nRows)));
 			}
-			printf("Normalized Absolute Change = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
+
+			// norm_diff = JacobiConv(arr, sol, Pressure, info);
+
+			// Un-comment the following lines if you need more details.
+
+			// if(iterationCount % 10000 == 0){
+			// 	printf("Normalized Absolute Change = %f, Jacobi TOL = %f\n", norm_diff, tolerance);
+			// }
 		}
 
 		// update temporary x-vector with new values on Device (GPU)
@@ -942,7 +1022,7 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 	float elapsedTime;
 	cudaEventElapsedTime(&elapsedTime, start, stop);
 
-	printf("Jacobi Convergence Time = %f\n", elapsedTime/1000);
+	printf("Jacobi Convergence Time = %f, iter = %d\n", elapsedTime/1000, iterationCount);
 
 	cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float)*info->nElements, cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
@@ -1176,11 +1256,11 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			// fw and fe don't depend on corners
 			if (uCol == 0){
-				fwU = 1.0/2*density*A*u[uRow*nColsU + uCol];
+				fwU = density*A*u[uRow*nColsU + uCol];
 				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
 			} else if(uCol == nColsU -1){
 				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
-				feU = 1.0/2*density*A*u[uRow*nColsU + uCol];
+				feU = density*A*u[uRow*nColsU + uCol];
 			} else{
 				fwU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol - 1]);
 				feU = 1.0/2*density*A*(u[uRow*nColsU + uCol] + u[uRow*nColsU + uCol + 1]);
