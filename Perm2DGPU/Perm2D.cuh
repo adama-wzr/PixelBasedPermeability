@@ -799,7 +799,7 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 	float *d_x_vec, float *d_temp_x_vec, float *d_Coeff, float *d_RHS){
 
 	/*
-		Function pJacobiGPU2D
+		Function JacobiGPU2D
 		
 		Inputs:
 			- float *arr: pointer to array containing the coefficient matrix
