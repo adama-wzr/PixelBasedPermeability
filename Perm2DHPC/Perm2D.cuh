@@ -676,17 +676,15 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 		Function will calculate the normalized permeability at each step.
 	*/
 
-	float QL = 0;
-	float QR = 0;
 	float dx, dy;
 	dx = info->dx;
 	dy = info->dy;
-	float Area = dx*dy;						// this is the cross-sectional area of each cell
+	float Area = dx*dy;	// this is the cross-sectional area of each cell
 	float viscosity = o->viscosity;
 
 	int nRowsU = info->numCellsY;
 	int nColsU = info->numCellsX + 1;
-	
+
 	float *FlowRate = (float *)malloc(sizeof(float)*nColsU);
 
 	for(int k = 0; k<nColsU; k++){
@@ -705,9 +703,8 @@ int PermCalc(float *U, options *o, simulationInfo *info){
 	Qavg = Qavg/nColsU;
 
 	free(FlowRate);
-
 	// info->Perm = Qavg/(o->DomainHeight*dx)*viscosity*o->DomainWidth/((o->PL - o->PR));
-	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx)*1000;
+	info->Perm = Qavg/(o->DomainHeight*o->DomainWidth)*viscosity*o->DomainWidth/((o->PL - o->PR)*o->DomainHeight*dx);
 	return 0;
 }
 
@@ -1301,17 +1298,13 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 	float dx, dy;
 	dx = info->dx;
 	dy = info->dy;
-	float alpha = o->alphaRelax;
 	float A = dx*dy;
 	// Useful variables in the solution
 	float fwU, fwV, feU, feV, fnU, fnV, fsU, fsV;
-	float sourceLHS, sourceRHS;
 	float DeltaF;
 	float awU, awV, aeU, aeV, anU, anV, asU, asV;
 	float density = o->density;
 	float viscosity = o->viscosity;
-
-	float temp[3];
 
 	// Useful indexing variables
 
@@ -1358,7 +1351,7 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 			} else if(uCol == 0 && uRow == nRowsU - 1){
 				// bottom left
 				fsU = 1.0/2*density*A*v[0];
-				fnU = 1.0/2*density*A*v[(uRow+1)*nColsV + uCol];
+				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol];
 			} else if(uCol == 0){
 				// Anywhere in left boundary
 				fnU = 1.0/2*density*A*v[uRow*nColsV + uCol];
@@ -1369,8 +1362,8 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 				fsU = 1.0/2*density*A*v[(uRow + 1)*nColsV + uCol - 1];
 			}else if(uCol == nColsU - 1 && uRow == nRowsU - 1){
 				// bottom right corner
-				fnU = density*A*v[(uRow)*nColsV + uCol - 1];
-				fsU = density*A*v[(0)*nColsV + uCol - 1];
+				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
+				fsU = 1.0/2*density*A*v[(0)*nColsV + uCol - 1];
 			} else if(uCol == nColsU - 1){
 				// right boundary
 				fnU = 1.0/2*density*A*v[(uRow)*nColsV + uCol - 1];
@@ -1417,16 +1410,26 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 
 			// Check if U is in a solid interface. If not gather coefficients and calculate explicit component
 
-			if(uCol == 0 && Grid[uRow*nColsV + uCol] == 1){
-				uExp[uRow*nColsU + uCol] = 0;
-				uCoeff[uRow*nColsU + uCol] = 1;
-			} else if(uCol == nColsU - 1 && Grid[uRow*nColsV + uCol - 1] == 1){
-				uExp[uRow*nColsU + uCol] = 0;
-				uCoeff[uRow*nColsU + uCol] = 1;
+			bool discFlagX = true;		// flag is created to avoid illegal and redundant memory accesses
+
+			if(uCol == 0){
+				if(Grid[uRow*nColsV + uCol] == 1){
+					uExp[uRow*nColsU + uCol] = 0;
+					uCoeff[uRow*nColsU + uCol] = 1;
+					discFlagX = false;
+				}
+			} else if(uCol == nColsU - 1){
+				if(Grid[uRow*nColsV + uCol - 1] == 1){
+					uExp[uRow*nColsU + uCol] = 0;
+					uCoeff[uRow*nColsU + uCol] = 1;
+					discFlagX = false;
+				}
 			} else if(Grid[uRow*nColsV + uCol] == 1 || Grid[uRow*nColsV + uCol - 1] == 1){
 				uExp[uRow*nColsU + uCol] = 0;
 				uCoeff[uRow*nColsU + uCol] = 1;
-			} else{
+				discFlagX = false;
+			} 
+			if(discFlagX == true){
 				// Hybrid Discretization
 				awU = findMax(fwU, d + fwU/2, 0.0f);
 				aeU = findMax(-feU, d - feU/2, 0.0f);
@@ -1468,30 +1471,33 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 				} else{
 					uExp[uRow*nColsU + uCol] += o->alphaRelax/uCoeff[uRow*nColsU + uCol]*(asU*u[(0)*nColsU + uCol]);
 				}
-
-				// if(uCol == 0 || uCol == nColsU - 1){
-				// 	uExp[uRow*nColsU + uCol] = 0.00;
-				// }
-				// if(uCol == 0){
-				// 	uExp[uRow*nColsU + uCol] = 0.00;
-				// }
 			}
-
-			// printf("uExp[%d] = %1.6f\n", uRow*nColsU + uCol, uExp[uRow*nColsU + uCol]);
-			// printf("uCoeff[%d] = %1.6f\n", uRow*nColsU + uCol, uCoeff[uRow*nColsU + uCol]);
 
 			// Check if V is in a solid interface. If not gather coefficients and calculate explicit component
 
-			if(vRow == 0 && Grid[vRow*nColsV + vCol] == 1){
-				vExp[vRow*nColsV + vCol] = 0;
-				vCoeff[vRow*nColsV + vCol] = 1;
-			} else if(vRow == nRowsV - 1 && Grid[(vRow - 1)*nColsV + vCol] == 1){
-				vExp[vRow*nColsV + vCol] = 0;
-				vCoeff[vRow*nColsV + vCol] = 1;
+			bool discFlag = true;			// flag is created to avoid illegal and redundant memory accesses
+
+			if(vRow == 0){
+				if(Grid[vRow*nColsV + vCol] == 1){
+					// North boundary and grid is solid
+					vExp[vRow*nColsV + vCol] = 0;
+					vCoeff[vRow*nColsV + vCol] = 1;
+					discFlag = false;
+				}	
+			}else if(vRow == nRowsV - 1){
+				if(Grid[(vRow - 1)*nColsV + vCol] == 1){
+					// South boundary and grid is solid
+					vExp[vRow*nColsV + vCol] = 0;
+					vCoeff[vRow*nColsV + vCol] = 1;
+					discFlag = false;
+				}
 			} else if(Grid[vRow*nColsV + vCol] == 1 || Grid[(vRow - 1)*nColsV + vCol] == 1){
 				vExp[vRow*nColsV + vCol] = 0;
 				vCoeff[vRow*nColsV + vCol] = 1;
-			} else{
+				discFlag = false;
+			}
+
+			if(discFlag == true){
 				// Hybrid Discretization
 				awV = findMax(fwV, d + fwV/2, 0.0f);
 				aeV = findMax(-feV, d - feV/2, 0.0f);
@@ -1501,8 +1507,6 @@ int explicitMomentum(unsigned int *Grid, float *uExp, float *vExp, float *u, flo
 				DeltaF = feV - fwV + fnV - fsV;
 
 				// Store central coefficient
-
-				// Should we select these coefficient better according to boundaries?
 
 				vCoeff[vRow*nColsV + vCol] = awV + aeV + asV + anV + DeltaF;
 
@@ -1568,7 +1572,6 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 	float alpha = o->alphaRelax;
 	float Area = dx*dy;
 	float density = o->density;
-	float viscosity = o->viscosity;
 
 	/* Create the "A" matrix in Ax = b system
 	
@@ -1585,7 +1588,7 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 	float *RHS = (float *)malloc(sizeof(float)*info->numCellsX*info->numCellsY);
 
 	// Initialize A to all zero's to avoid NaN's
-	memset(A, 0, sizeof(A));
+	memset(A, 0, sizeof(float)*info->numCellsX*info->numCellsY*5);
 
 	// Indexing variables
 
@@ -1596,7 +1599,6 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 
 	// Neighborhood parameters
 
-	float ae, aw, as, an;
 	float aE, aW, aS, aN, aP;
 	float bp;
 
@@ -1605,30 +1607,30 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 			index = row*nColsP + col;
 
 			// Initialize to 0's to avoid NaN's
-			aP = 0;
-			aN = 0;
-			aS = 0;
-			aW = 0;
-			aE = 0;
-			bp = 0;
-			RHS[index] = 0;
+			aP = 0.0;
+			aN = 0.0;
+			aS = 0.0;
+			aW = 0.0;
+			aE = 0.0;
+			bp = 0.0;
+			RHS[index] = 0.0;
 
 			// Check if P[index] is solid. If so, equation is P = 0 (central coeff = 1, RHS = 0)
 			if(Grid[index] == 1){
-				A[index*5 + 0] = 1;
-				A[index*5 + 1] = 0;
-				A[index*5 + 2] = 0;
-				A[index*5 + 3] = 0;
-				A[index*5 + 4] = 0;
-				RHS[index] = 0;
+				A[index*5 + 0] = -1.0;
+				A[index*5 + 1] = 0.0;
+				A[index*5 + 2] = 0.0;
+				A[index*5 + 3] = 0.0;
+				A[index*5 + 4] = 0.0;
+				RHS[index] = 0.0;
 			} else if(Grid[index] == 2)
 			{
-				A[index*5 + 0] = 1;
-				A[index*5 + 1] = 0;
-				A[index*5 + 2] = 0;
-				A[index*5 + 3] = 0;
-				A[index*5 + 4] = 0;
-				RHS[index] = o->PR;
+				A[index*5 + 0] = -1.0;
+				A[index*5 + 1] = 0.0;
+				A[index*5 + 2] = 0.0;
+				A[index*5 + 3] = 0.0;
+				A[index*5 + 4] = 0.0;
+				RHS[index] = -o->PR;
 			}else
 			{ 
 				// If central point is not solid, then we proceed normally
@@ -1765,27 +1767,27 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 				A[index*5 + 4] = aN;
 
 				if(col == 0){
-					A[index*5 + 0] = -1;
-					A[index*5 + 1] = 0;
-					A[index*5 + 2] = 0;
-					A[index*5 + 3] = 0;
-					A[index*5 + 4] = 0;
+					A[index*5 + 0] = -1.0;
+					A[index*5 + 1] = 0.0;
+					A[index*5 + 2] = 0.0;
+					A[index*5 + 3] = 0.0;
+					A[index*5 + 4] = 0.0;
 					RHS[index] = -o->PL;
 				} else if(col == nColsP - 1){
-					A[index*5 + 0] = -1;
-					A[index*5 + 1] = 0;
-					A[index*5 + 2] = 0;
-					A[index*5 + 3] = 0;
-					A[index*5 + 4] = 0;
+					A[index*5 + 0] = -1.0;
+					A[index*5 + 1] = 0.0;
+					A[index*5 + 2] = 0.0;
+					A[index*5 + 3] = 0.0;
+					A[index*5 + 4] = 0.0;
 					RHS[index] = -o->PR;
 				}
 			}
 		}
 	}
 
-	// Declare GPU arrays
+	// Solve
 
-	cudaSetDevice(omp_get_thread_num());
+	// Declare GPU arrays
 
 	float *d_x_vec = NULL;
 	float *d_temp_x_vec = NULL;
@@ -1802,10 +1804,12 @@ int implicitPressure(unsigned int *Grid, float *uExp, float *vExp, float *uCoeff
 		return 0;
 	}
 
-	// Solve
+	// Call the solver
+
 	JacobiGPU2D(A, RHS, Pressure, o, info, d_x_vec, d_temp_x_vec, d_Coeff, d_RHS);
 
-	// Free GPU
+	// Un-initialize all dynamically allocated arrays
+
 	unInitializeGPU(&d_x_vec, &d_temp_x_vec, &d_RHS, &d_Coeff);
 
 	free(A);
