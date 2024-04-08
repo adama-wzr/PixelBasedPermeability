@@ -52,6 +52,15 @@ typedef struct{
 	float ResidualP;
 }simulationInfo;
 
+// Struct to hold convergence information
+typedef struct{
+	long int iter;
+	float Perm;
+	float Residual;
+	float PermChange;
+
+}convInfo;
+
 // define pair for coords
 
 typedef std::pair<int, int> coordPair;
@@ -465,7 +474,7 @@ int printBatchOut(options *o, simulationInfo *info, int imgNumber, long int iter
 }
 
 
-int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo *info){
+int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo *info, int myImg){
 	/*
 		printPUVmaps
 		Inputs:
@@ -482,7 +491,9 @@ int printPUVmaps(float* Pressure, float* u, float* v, options *o, simulationInfo
 	*/
 
 	FILE *MAP;
-	MAP = fopen(o->outputFilename, "w");
+	char FileName[100];
+	sprintf(FileName,"PUV_%05d.csv", myImg);
+	MAP = fopen(FileName, "w");
 
 	fprintf(MAP, "P,U,V,x,y\n");
 
