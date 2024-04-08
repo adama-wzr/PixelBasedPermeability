@@ -628,7 +628,7 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 	float cellCont = 0;
 
 	for(int row = 0; row<info->numCellsY; row++){
-		for(int col = 0; col<info->numCellsX; col++){
+		for(int col = 1; col<info->numCellsX - 1; col++){
 			cellCont = density*Area*(fabs(U[row*nColsU + col] - U[row*nColsU + col + 1] + V[(row + 1)*nColsV + col] - V[row*nColsV + col]));
 			R += cellCont;
 			if(cellCont > max){
@@ -637,7 +637,7 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 		}
 	}
 
-	// printf("Max Cell Continuity = %1.9f\n", max);
+	printf("Max Cell Continuity = %e\n", max);
 	// R = R/(info->numCellsY*info->numCellsX);
 
 	return max;
