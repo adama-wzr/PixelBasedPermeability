@@ -544,9 +544,6 @@ float ResMap(float *U, float *V, options *o, simulationInfo *info){
 	int nColsU = info->numCellsX + 1;
 	int nColsV = info->numCellsY;
 
-	int nRowsV = info->numCellsY+1;
-	int nRowsU = info->numCellsY;
-
 	// Properties
 
 	float density = o->density;
@@ -617,9 +614,6 @@ float ResidualContinuity(float *U, float *V, options *o, simulationInfo *info){
 
 	int nColsU = info->numCellsX + 1;
 	int nColsV = info->numCellsY;
-
-	int nRowsV = info->numCellsY+1;
-	int nRowsU = info->numCellsY;
 
 	// Properties
 
@@ -777,8 +771,6 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 
 	// More runtime related variables
 	
-	float conv_stat = 1;
-	float sigma = 0.0;
 	float norm_diff;
 	float convergence_criteria = 1;
 	int index;
@@ -800,7 +792,7 @@ int JacobiGPU2D(float *arr, float *sol, float *Pressure, options *o, simulationI
 		updateX_SOR<<<numBlocks, threads_per_block>>>(d_Coeff, d_temp_x_vec, d_RHS, d_x_vec, info->numCellsX, info->numCellsY);
 		// Convergence related material
 
-		if(iterationCount % 10000 == 0)
+		if(iterationCount % 100 == 0)
 		{	
 			// Copy Pressure from the GPU to Host
 			cudaStatus = cudaMemcpy(Pressure, d_x_vec, sizeof(float) * info->nElements, cudaMemcpyDeviceToHost);
@@ -1605,7 +1597,6 @@ int momentumCorrection(unsigned int *Grid, float *uExp, float *vExp, float* u, f
 	int nColsP = info->numCellsY;
 
 	int nRowsV = info->numCellsY+1;
-	int nRowsU = info->numCellsY;
 	int nRowsP = info->numCellsY;
 
 	int uRow, uCol, vRow, vCol;

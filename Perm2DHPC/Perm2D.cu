@@ -25,8 +25,6 @@ int main(void){
 	omp_set_num_threads(numThreads);
 	cudaGetDeviceCount(&nGPUs);
 
-	printf("Do I even get here?CPU = %d, GPU = %d\n", numThreads, nGPUs);
-
 	// Let's pre allocate all arrays here globally and then distribute them
 
 	int nRows = opts.MeshAmp*128;
@@ -120,7 +118,10 @@ int main(void){
 
 		FloodFill(Grid, &simInfo);
 
-		std::cout << "Flood Fill Successfull. Thread = " << threadIdx << std::endl;
+		if(opts.verbose == 1){
+			std::cout << "Flood Fill Successfull. Thread = " << threadIdx << std::endl;
+		}
+		
 
 		// Define arrays essential for the solution
 
@@ -134,7 +135,9 @@ int main(void){
 		float *uCoeff = Global_uCoeff + threadIdx * (nCols + 1)*nRows;
 		float *vCoeff = Global_vCoeff + threadIdx * (nRows + 1)*nCols;
 
-		std::cout << "Allocated arrays Successfull. Thread = " << threadIdx << std::endl;
+		if(opts.verbose == 1){
+			std::cout << "Allocated arrays Successfull. Thread = " << threadIdx << std::endl;
+		}
 
 		// Initialize arrays
 
@@ -144,9 +147,9 @@ int main(void){
 				if(col < simInfo.numCellsX){
 					Pressure[row*(simInfo.numCellsX) + col] =  (1.0 - (float)col/(simInfo.numCellsX))*(opts.PL - opts.PR) + opts.PR;
 				}
-				U[index] = 0.01;
+				U[index] = 0.001;
 				V[index] = 0.0;
-				uExp[index] = 0.01;
+				uExp[index] = 0.001;
 				vExp[index] = 0.0;
 				uCoeff[index] = 0.0;
 				vCoeff[index] = 0.0;
@@ -169,7 +172,9 @@ int main(void){
 		float PermOld = 1;
 		float PermChange = 1;
 
-		std::cout << "Start loop Successfull." << std::endl;
+		if(opts.verbose == 1){
+			std::cout << "Start loop Successfull." << std::endl;
+		}
 
 		while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS && PermChange > PermTHR){
 
@@ -185,18 +190,15 @@ int main(void){
 
 			*/
 
-			if(iter == 0){
+			if(iter == 0 && opts.verbose == 1){
 				printf("Global Iter: %ld, Thread = %d\n\n", iter+1, threadIdx);
-			}else if(iter % 10 == 0){
+			}else if(iter % 10 == 0 && opts.verbose == 1){
 				printf("Global Iter: %ld, Thread = %d\n", iter+1, threadIdx);
 				printf("Permeability: %f\n", simInfo.Perm);
 				printf("Continuity RMS: %1.9f\n\n", RMS);
 			}
-			// std::cout << "Thread Num:" << omp_get_thread_num() << "Explicit Momentum Iter" << iter << std::endl;
 			explicitMomentum(Grid, uExp, vExp, U, V, uCoeff, vCoeff, &opts, &simInfo);
-			// std::cout << "Thread Num:" << omp_get_thread_num() << "implicitPressure Iter" << iter << std::endl;
 			implicitPressure(Grid, uExp, vExp, uCoeff, vCoeff, Pressure, &opts, &simInfo);
-			// std::cout << "Thread Num:" << omp_get_thread_num() << "Momentum Correction Iter" << iter << std::endl;
 			momentumCorrection(Grid, uExp, vExp, U, V, uCoeff, vCoeff, Pressure, &opts, &simInfo);
 
 			RMS = ResidualContinuity(U, V, &opts, &simInfo);
