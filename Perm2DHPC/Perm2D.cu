@@ -51,6 +51,11 @@ int main(void){
 		// Start datastructures
 
 		simulationInfo simInfo;
+		convInfo *Conv;
+
+		Conv = (convInfo *)malloc(sizeof(convInfo)*opts.MaxIterGlobal);
+
+		memset(Conv, 0, sizeof(convInfo)*opts.MaxIterGlobal);
 		
 		// Get thread index
 
@@ -160,9 +165,13 @@ int main(void){
 		float RMS = 1.0;
 		long int iter = 0;
 
+		float PermTHR = 0.001;
+		float PermOld = 1;
+		float PermChange = 1;
+
 		std::cout << "Start loop Successfull." << std::endl;
 
-		while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS){
+		while(iter < opts.MaxIterGlobal && RMS > opts.ConvergenceRMS && PermChange > PermTHR){
 
 			/*
 				SUV-CUT procedure:
@@ -194,35 +203,45 @@ int main(void){
 
 			PermCalc(U, &opts, &simInfo);
 
-			if(convFlag == true && iter % 10 == 0)
-			{
-				FILE *CONV;
-				CONV = fopen(convFile, "a+");
-				fprintf(CONV, "%ld,%1.9f,%1.9f,%f,%d\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp);
-				fclose(CONV);
+			// Update our convergence file
+
+			Conv[iter].iter = iter;
+			Conv[iter].Perm = simInfo.Perm;
+			Conv[iter].Residual = RMS;
+			Conv[iter].PermChange = PermChange;
+
+
+			// Calculate Perm change to see if it flatlined over 100 iterations
+			if(iter % 100 == 0){
+				PermChange = fabs((simInfo.Perm - PermOld)/simInfo.Perm);
+				PermOld = simInfo.Perm;
 			}
 
 			iter++;
 		}
 
-		// if(opts.printMaps == 1){
-		// 	printPUVmaps(Pressure, U, V, &opts, &simInfo);
-		// }
+		// Print PUV Map
+
+		if(opts.printMaps == 1){
+			printPUVmaps(Pressure, U, V, &opts, &simInfo, myImg);
+		}
+
+		// Print batch output
 
 		printBatchOut(&opts, &simInfo, myImg, iter, RMS);
 
-		// Save results to output file
-		
-		// Housekeeping
+		// Print convergence data if user wants it
+		if(convFlag == true){
+			FILE *CONV;
+			CONV = fopen(convFile, "w+");
+			fprintf(CONV, "iter,K,R,Kchange\n");
+			for(int i=0; i<opts.MaxIterGlobal; i++){
+				fprintf(CONV,"%ld,%f,%f,%f\n", Conv[i].iter, Conv[i].Perm, Conv[i].Residual, Conv[i].PermChange);
+			}
+			fclose(CONV);
+		}
 
-		// free(Pressure);
-		// free(U);
-		// free(V);
-		// free(uCoeff);
-		// free(vCoeff);
-		// free(uExp);
-		// free(vExp);
-		// free(Grid);
+		free(Conv);
 
 	}
 
