@@ -24,6 +24,13 @@ int main(void){
 
 	omp_set_num_threads(numThreads);
 	cudaGetDeviceCount(&nGPUs);
+	
+	// Add a header to our Batch Output file
+
+	FILE *OUT;
+	OUT = fopen(opts.outputFilename, "a+");
+	fprintf(OUT, "imgNum,RMS,K,iter,porosity,time\n");
+	fclose(OUT);
 
 	// Let's pre allocate all arrays here globally and then distribute them
 
@@ -45,6 +52,10 @@ int main(void){
 
 	#pragma omp parallel for schedule(auto)
 	for(int myImg = 0; myImg<opts.nImg; myImg++){
+
+		// start timer
+
+		double start_time = omp_get_wtime();
 
 		// Start datastructures
 
@@ -230,7 +241,7 @@ int main(void){
 
 		// Print batch output
 
-		printBatchOut(&opts, &simInfo, myImg, iter, RMS);
+		printBatchOut(&opts, &simInfo, myImg, iter, RMS, (omp_get_wtime() - start_time));
 
 		// Print convergence data if user wants it
 		if(convFlag == true){
@@ -238,7 +249,7 @@ int main(void){
 			CONV = fopen(convFile, "w+");
 			fprintf(CONV, "iter,K,R,Kchange\n");
 			for(int i=0; i<opts.MaxIterGlobal; i++){
-				fprintf(CONV,"%ld,%f,%f,%f\n", Conv[i].iter, Conv[i].Perm, Conv[i].Residual, Conv[i].PermChange);
+				fprintf(CONV,"%ld,%1.3e,%1.3e,%1.5f\n", Conv[i].iter, Conv[i].Perm, Conv[i].Residual, Conv[i].PermChange);
 			}
 			fclose(CONV);
 		}

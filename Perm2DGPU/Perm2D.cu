@@ -143,7 +143,7 @@ int main(void){
 
 		PermCalc(U, &opts, &simInfo);
 
-		fprintf(OUT, "%ld,%1.9f,%1.9f,%f,%d,%1.9f\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp, simInfo.Flowrate);
+		fprintf(OUT, "%ld,%1.3e,%1.3e,%f,%d,%1.9f\n",iter,simInfo.Perm, RMS, opts.alphaRelax, opts.MeshAmp, simInfo.Flowrate);
 
 		if(iter % 100 == 0){
 			RMS = ResidualContinuity(U, V, &opts, &simInfo);

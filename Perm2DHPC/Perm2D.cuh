@@ -459,14 +459,14 @@ float calcPorosity(unsigned char* imageAddress, int Width, int Height){
 }
 
 
-int printBatchOut(options *o, simulationInfo *info, int imgNumber, long int iter, float RMS){
+int printBatchOut(options *o, simulationInfo *info, int imgNumber, long int iter, float RMS, double time){
 
 	FILE *OUT;
 	OUT = fopen(o->outputFilename, "a+");
 
 	// Info to print
 	// imgNumber, convergence, permeability, numIter, porosity
-	fprintf(OUT, "%d,%f,%f,%ld,%f\n", imgNumber, RMS, info->Perm, iter, info->porosity);
+	fprintf(OUT, "%d,%1.3e,%1.3e,%ld,%f,%f,%f\n", imgNumber, RMS, info->Perm, iter, info->porosity, time);
 
 	fclose(OUT);
 
