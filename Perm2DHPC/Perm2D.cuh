@@ -466,7 +466,7 @@ int printBatchOut(options *o, simulationInfo *info, int imgNumber, long int iter
 
 	// Info to print
 	// imgNumber, convergence, permeability, numIter, porosity
-	fprintf(OUT, "%d,%1.3e,%1.3e,%ld,%f,%f,%f\n", imgNumber, RMS, info->Perm, iter, info->porosity, time);
+	fprintf(OUT, "%d,%1.3e,%1.3e,%ld,%f,%f\n", imgNumber, RMS, info->Perm, iter, info->porosity, time);
 
 	fclose(OUT);
 
