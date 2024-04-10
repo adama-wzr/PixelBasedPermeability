@@ -12,7 +12,7 @@ OutputName: QSGS_GPU_Batch.csv
 printMaps: 1
 MaxIterGlobal: 5000
 ResidualConv: 1e-11
-MaxIterSolver: 1000000
+MaxIterSolver: 100000
 SolverConv: 1e-7
 nCores: 4
 nImg: 300
