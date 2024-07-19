@@ -9,6 +9,11 @@ This repository includes three versions of the same code: a CPU, GPU, and HPC ve
 2. [CPU Compilation](#cpu-compilation)
 3. [GPU Compilation](#gpu-compilation)
 4. [HPC Compilation](#hpc-compilation)
+5. [Required Files](#required-files)
+6. [How to Cite](#how-to-cite)
+7. [Authors](#authors)
+8. [Documentation](#documentation)
+9. [Acknowledgements](#acknowledgements)
 
 ## Requirements
 
@@ -52,7 +57,7 @@ All these files have to be in the same folder (or in the path for compilation/ru
 - input.txt
 - stb_image.h
 
-## How to cite
+## How to Cite
 
 Publication is in preparation at the moment. If you need to use this code and there is no publication available yet, contact one of the authors. There will be one publication for the code, and one link to the open source dataset, which was generated using this code.
 
