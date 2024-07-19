@@ -64,18 +64,18 @@ Publication is in preparation at the moment. If you need to use this code and th
 ## Authors
 
 - Main developer: Andre Adam (The University of Kansas)
-- - [ResearchGate](https://www.researchgate.net/profile/Andre-Adam-2)
-  - [GoogleScholar](https://scholar.google.com/citations?hl=en&user=aP_rDkMAAAAJ)
-  - [GitHub](https://github.com/adama-wzr)
+    - [ResearchGate](https://www.researchgate.net/profile/Andre-Adam-2)
+    - [GoogleScholar](https://scholar.google.com/citations?hl=en&user=aP_rDkMAAAAJ)
+    - [GitHub](https://github.com/adama-wzr)
 - Advisor: Dr. Xianglin Li (Washingtion University in St. Louis)
-- - [Website](https://xianglinli.wixsite.com/mysite)
-  - [GoogleScholar](https://scholar.google.com/citations?user=8y0Vd8cAAAAJ&hl=en)
+    - [Website](https://xianglinli.wixsite.com/mysite)
+    - [GoogleScholar](https://scholar.google.com/citations?user=8y0Vd8cAAAAJ&hl=en)
 - Advisor: Dr. Huazhen Fang (The University of Kansas)
-- - [Website](https://fang.ku.edu/)
-  - [Lab Website](https://www.issl.space/)
-  - [GoogleScholar](https://scholar.google.com/citations?user=3m7Yd4YAAAAJ&hl=en)
+    - [Website](https://fang.ku.edu/)
+    - [Lab Website](https://www.issl.space/)
+    - [GoogleScholar](https://scholar.google.com/citations?user=3m7Yd4YAAAAJ&hl=en)
 - Validation: Silven Stallard (The University of Kansas)
-- - [ResearchGate](https://www.researchgate.net/profile/Silven_Stallard)
+    - [ResearchGate](https://www.researchgate.net/profile/Silven_Stallard)
 
 ## Documentation
 
