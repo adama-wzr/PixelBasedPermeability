@@ -7,6 +7,8 @@ This repository includes three versions of the same code: a CPU, GPU, and HPC ve
 
 1. [Requirements](#requirements)
 2. [CPU Compilation](#cpu-compilation)
+3. [GPU Compilation](#gpu-compilation)
+4. [HPC Compilation](#hpc-compilation)
 
 ## Requirements
 
@@ -15,6 +17,7 @@ This list reflects what we tested on and can confirm that runs properly, but old
 - CUDA >= 11.0
 - gcc >= 11.0
 - OpenMP >= 4.5
+- [stb_image](https://github.com/nothings/stb) latest version
 
 The code has been tested on Ubuntu >= 20.04, Windows 10 and 11. The HPC version has only been tested on Rocky Linux 8.7.
 
@@ -25,3 +28,57 @@ Need to invoke the OpenMP from gcc. On Ubuntu, assuming all files are in the sam
 ```bash
 g++ -fopenmp Perm2D.cpp
 ```
+## GPU Compilation
+
+With the NVIDIA suite installed properly and already added to the path, also assuming all required files are in the same folder.
+
+```bash
+nvcc Perm2D.cu
+```
+## HPC Compilation
+
+The HPC compilation will depend on the HPC environment. Assuming all modules are loaded properly and the appropriate files are in the same folder.
+
+```bash
+nvcc -Xcompiler -fopenmp Perm2D.cu
+```
+## Required Files
+
+All these files have to be in the same folder (or in the path for compilation/run).
+
+- 2D grayscale .jpg image.
+- Main Perm2D file (.cpp or .cu)
+- Helper Perm2D file (.h or .cuh)
+- input.txt
+- stb_image.h
+
+## How to cite
+
+Publication is in preparation at the moment. If you need to use this code and there is no publication available yet, contact one of the authors. There will be one publication for the code, and one link to the open source dataset, which was generated using this code.
+
+## Authors
+
+- Main developer: Andre Adam (The University of Kansas)
+- - [ResearchGate](https://www.researchgate.net/profile/Andre-Adam-2)
+  - [GoogleScholar](https://scholar.google.com/citations?hl=en&user=aP_rDkMAAAAJ)
+  - [GitHub](https://github.com/adama-wzr)
+- Advisor: Dr. Xianglin Li (Washingtion University in St. Louis)
+- - [Website](https://xianglinli.wixsite.com/mysite)
+  - [GoogleScholar](https://scholar.google.com/citations?user=8y0Vd8cAAAAJ&hl=en)
+- Advisor: Dr. Huazhen Fang (The University of Kansas)
+- - [Website](https://fang.ku.edu/)
+  - [Lab Website](https://www.issl.space/)
+  - [GoogleScholar](https://scholar.google.com/citations?user=3m7Yd4YAAAAJ&hl=en)
+- Validation: Silven Stallard (The University of Kansas)
+- - [ResearchGate](https://www.researchgate.net/profile/Silven_Stallard)
+
+## Documentation
+
+The publication (upcoming) is an excellent source of basic information on the formulation and validation. The documentation pdf is a more in-depth source on the mathematical formulation and code implementation, while also providing technical insight on how to run and modify the code included in this repository.
+
+## Acknowledgements
+
+This work wouldn't be possible without the computational time awarded as part of the following grants:
+
+This work used Expanse(GPU)/Bridges2(CPU) at SDSC/PSC through allocations MAT210014 and MAT230071 from the Advanced Cyberinfrastructure Coordination Ecosystem: Services & Support (ACCESS) program, which is supported by National Science Foundation grants #2138259, #2138286, #2138307, #2137603, and #2138296.
+
