@@ -3,6 +3,11 @@ This repository is dedicated to the simulation of permeability in 2D structures 
 
 This repository includes three versions of the same code: a CPU, GPU, and HPC versions. The CPU version has an OpenMP-based accelerator for the iterative solver, and the user has the option of selecting the number of CPU cores. For the GPU version, the only user option is to use a CUDA capable GPU for acceleration. In this case, additional GPUs won't do anything. The HPC version can be used with multiple GPUs, and it requires at least one CPU core per GPU.
 
+# Table of Contents
+
+1. [Requirements](#requirements)
+2. [CPU Compilation](#cpu-compilation)
+
 ## Requirements
 
 This list reflects what we tested on and can confirm that runs properly, but older versions might work. Might work with other compilers as well.
