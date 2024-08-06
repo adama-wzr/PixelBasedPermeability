@@ -92,3 +92,5 @@ This work wouldn't be possible without the computational time awarded as part of
 
 This work used Expanse(GPU)/Bridges2(CPU) at SDSC/PSC through allocations MAT210014 and MAT230071 from the Advanced Cyberinfrastructure Coordination Ecosystem: Services & Support (ACCESS) program, which is supported by National Science Foundation grants #2138259, #2138286, #2138307, #2137603, and #2138296.
 
+X.L. highly appreciates the support from the National Science Foundation (Award 1941083 and 2329821), A.A. and S.S. appreciate the funding support by NASA EPSCoR (Award 80NSSC22M0221).
+
