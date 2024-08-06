@@ -10,10 +10,11 @@ This repository includes three versions of the same code: a CPU, GPU, and HPC ve
 3. [GPU Compilation](#gpu-compilation)
 4. [HPC Compilation](#hpc-compilation)
 5. [Required Files](#required-files)
-6. [How to Cite](#how-to-cite)
-7. [Authors](#authors)
-8. [Documentation](#documentation)
-9. [Acknowledgements](#acknowledgements)
+6. [Data Generation](#data-generation)
+7. [How to Cite](#how-to-cite)
+8. [Authors](#authors)
+9. [Documentation](#documentation)
+10. [Acknowledgements](#acknowledgements)
 
 ## Requirements
 
@@ -57,6 +58,10 @@ All these files have to be in the same folder (or in the path for compilation/ru
 - input.txt
 - stb_image.h
 
+## Data Generation
+
+The folder [2D Image Generation](https://github.com/adama-wzr/PixelBasedPermeability/tree/main/2D%20Image%20Generation) is included as it is an important part of the publication. While that code can be used to reproduce the dataset of the publication, it is also a great source of data for any user that is looking to test the code or even generate a dataset for something else. The code is capable of generating batches of QSGS, Voronoi, and Random-Sphere Packing Method, all in 2D, with relative efficiency.
+
 ## How to Cite
 
 Publication is in preparation at the moment. If you need to use this code and there is no publication available yet, contact one of the authors. There will be one publication for the code, and one link to the open source dataset, which was generated using this code.
@@ -79,7 +84,7 @@ Publication is in preparation at the moment. If you need to use this code and th
 
 ## Documentation
 
-The publication (upcoming) is an excellent source of basic information on the formulation and validation. The documentation pdf is a more in-depth source on the mathematical formulation and code implementation, while also providing technical insight on how to run and modify the code included in this repository.
+The publication (upcoming) is an excellent source of basic information on the formulation and validation. The documentation pdf is a more in-depth source on the mathematical formulation and code implementation, while also providing technical insight on how to run and modify the code included in this repository. The documentation for the image generation and permeability code are separate documents, but both of them can be found [here](https://github.com/adama-wzr/PixelBasedPermeability/tree/main/Documentation).
 
 ## Acknowledgements
 
