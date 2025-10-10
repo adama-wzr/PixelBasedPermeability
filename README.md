@@ -64,7 +64,13 @@ The folder [2D Image Generation](https://github.com/adama-wzr/PixelBasedPermeabi
 
 ## How to Cite
 
-Publication is in preparation at the moment. If you need to use this code and there is no publication available yet, contact one of the authors. There will be one publication for the code, and one link to the open source dataset, which was generated using this code.
+If any of this is helpful to you, please consider citing the following work:
+
+- Adam, A., Stallard, S.L., Fang, H. et al. A General Framework for Predicting Permeability in Porous Structures Using Convolutional Neural Networks with Error Estimation. Transp Porous Med 152, 100 (2025). https://doi.org/10.1007/s11242-025-02239-4
+
+The data for this work and trained CNN models are also published:
+
+- Adam, Andre; Stallard, Silven; Fang, Huazhen; Li, Xianglin (2025), “Permeability Prediction in 2D: Dataset and Trained Convolutional Neural Networks”, Mendeley Data, V2, doi: 10.17632/576dvrrsdx.2
 
 ## Authors
 
@@ -84,7 +90,7 @@ Publication is in preparation at the moment. If you need to use this code and th
 
 ## Documentation
 
-The publication (upcoming) is an excellent source of basic information on the formulation and validation. The documentation pdf is a more in-depth source on the mathematical formulation and code implementation, while also providing technical insight on how to run and modify the code included in this repository. The documentation for the image generation and permeability code are separate documents, but both of them can be found [here](https://github.com/adama-wzr/PixelBasedPermeability/tree/main/Documentation).
+The publication is an excellent source of basic information on the formulation and validation. The documentation pdf is a more in-depth source on the mathematical formulation and code implementation, while also providing technical insight on how to run and modify the code included in this repository. The documentation for the image generation and permeability code are separate documents, and both of them can be found [here](https://github.com/adama-wzr/PixelBasedPermeability/tree/main/Documentation).
 
 ## Acknowledgements
 
